@@ -129,9 +129,8 @@ GameObject:
   m_Component:
   - component: {fileID: 127371228}
   - component: {fileID: 127371229}
-  - component: {fileID: 127371230}
   m_Layer: 0
-  m_Name: Sample
+  m_Name: NetworkManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -161,21 +160,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 127371227}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ea8de8a1210f957ba96c47ee06f64c2, type: 3}
+  m_Script: {fileID: 11500000, guid: 703b50f29cb0c15c0b0a1690c3918d20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &127371230
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 127371227}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc9d4bb9d32916be8ba1a6608d19ac37, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  host: 127.0.0.1
+  port: 8042
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
