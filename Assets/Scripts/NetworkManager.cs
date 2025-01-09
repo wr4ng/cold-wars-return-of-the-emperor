@@ -1,25 +1,26 @@
-
-using UnityEngine;
+using System.Net.Sockets;
+using System.Threading;
+using System.Collections.Generic;
 
 using dotSpace.Interfaces.Space;
 using dotSpace.Objects.Network;
 using dotSpace.Objects.Space;
-using System.Net.Sockets;
+
+using UnityEngine;
 
 public class NetworkManager : MonoBehaviour
 {
-    [SerializeField] private string host = "127.0.0.1";           // Host to connect to (or create server at)
-    [SerializeField, Range(8000, 10000)] private int port = 8042; // The port the server hosts
+    private static SpaceRepository repository;
+    private static ISpace serverSpace;
 
-    private SpaceRepository repository;
-    private ISpace serverSpace;
+    private static ISpace mySpace;
 
-    private ISpace mySpace;
+    public static bool isServer { get; private set; } = false;
+    public static bool isRunning { get; private set; } = false;
 
-    private bool isServer = false;
-    private bool isRunning = false;
+    private static Thread serverThread;
 
-    public void StartServer()
+    public static void StartServer(string host, int port)
     {
         // Setup server repository
         string connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
@@ -29,15 +30,20 @@ public class NetworkManager : MonoBehaviour
         serverSpace = new SequentialSpace();
         repository.AddSpace("server", serverSpace);
 
+        // Start server thread
+        serverThread = new Thread(() => RunServerListen());
+        serverThread.Start();
+
         isServer = true;
         isRunning = true;
         Debug.Log("Server started with connection string: " + connectionString);
     }
 
-    public void StartClient()
+    public static void StartClient(string host, int port)
     {
         string connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);
         serverSpace = new RemoteSpace(connectionString);
+        serverSpace.Put("join");
 
         isServer = false;
         isRunning = true;
@@ -48,38 +54,32 @@ public class NetworkManager : MonoBehaviour
     {
         if (!isRunning)
         {
-            if (Input.GetKeyDown(KeyCode.S))
+            return;
+        }
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            try
             {
-                StartServer();
-                return;
+                serverSpace.Put(Time.time.ToString());
+                Debug.Log("[client] sent timestamp to server");
             }
-            if (Input.GetKeyDown(KeyCode.C))
+            catch (SocketException e)
             {
-                StartClient();
-                return;
+                Debug.Log("[client] failed to send timestamp: " + e.ToString());
             }
         }
-        else
+    }
+
+    private static void RunServerListen()
+    {
+        Debug.Log("[server] server listen thread started...");
+        while (isRunning)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string));
+
+            foreach (ITuple t in tuples)
             {
-                if (isServer)
-                {
-                    ITuple tuple = serverSpace.GetP(typeof(string));
-                    Debug.Log("[server] " + ((tuple == null) ? "null" : tuple[0]));
-                }
-                else
-                {
-                    try
-                    {
-                        serverSpace.Put(Time.time.ToString());
-                        Debug.Log("[client] sent timestamp to server");
-                    }
-                    catch (SocketException e)
-                    {
-                        Debug.Log("[client] failed to send timestamp: " + e.ToString());
-                    }
-                }
+                Debug.Log(t[0]);
             }
         }
     }
