@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class NetworkUI : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class NetworkUI : MonoBehaviour
 
     [Header("In-Game UI")]
     public TMP_Text statusText;
+    public Button quitButton;
 
     public void StartHost()
     {
@@ -23,8 +25,15 @@ public class NetworkUI : MonoBehaviour
         connectUI.SetActive(false);
     }
 
+    public void Quit()
+    {
+        NetworkManager.Close();
+        connectUI.SetActive(true);
+    }
+
     private void Update()
     {
+        quitButton.gameObject.SetActive(NetworkManager.isRunning);
         if (!NetworkManager.isRunning)
         {
             statusText.text = "Status: Not connected";

@@ -11,6 +11,7 @@ using UnityEngine;
 public class NetworkManager : MonoBehaviour
 {
     private static SpaceRepository repository;
+    private static string connectionString;
     private static ISpace serverSpace;
 
     private static ISpace mySpace;
@@ -23,7 +24,7 @@ public class NetworkManager : MonoBehaviour
     public static void StartServer(string host, int port)
     {
         // Setup server repository
-        string connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
+        connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
         repository = new SpaceRepository();
         repository.AddGate(connectionString);
 
@@ -41,13 +42,33 @@ public class NetworkManager : MonoBehaviour
 
     public static void StartClient(string host, int port)
     {
-        string connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);
+        connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);
+        Debug.Log("Trying to connect to: " + connectionString + "...");
         serverSpace = new RemoteSpace(connectionString);
         serverSpace.Put("join");
 
         isServer = false;
         isRunning = true;
         Debug.Log("Connected to: " + connectionString);
+    }
+
+    public static void Close()
+    {
+        if (isRunning)
+        {
+            isRunning = false;
+            if (isServer)
+            {
+                Debug.Log("Closing server...");
+                if (serverThread.IsAlive)
+                {
+                    serverSpace.Put("stop"); // To resolve serverSpace.getAll() call in RunServerListen(). Can maybe also just abort thread?
+                }
+                serverThread.Join();
+                repository.CloseGate(connectionString);
+                Debug.Log("Server closed");
+            }
+        }
     }
 
     private void Update()
