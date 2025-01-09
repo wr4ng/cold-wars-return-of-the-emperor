@@ -14,6 +14,7 @@ public class PlayerMovement : MonoBehaviour
     public float backwardForce = -250f;
     public float rotationSpeed = 100f;
 
+    public Transform penguinTransform;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -45,5 +46,28 @@ public class PlayerMovement : MonoBehaviour
         {
             transform.Rotate(0, rotationSpeed * Time.deltaTime, 0);
         }
+
+        if (input.y > 0)
+        {
+            Debug.Log("More");
+            SetPenguinRotation(0);
+        }
+        else if (input.y < 0)
+        {
+            Debug.Log("Less");
+            SetPenguinRotation(-180);
+        }
+        else if (input.y == 0)
+        {
+            Debug.Log("Zero");
+            SetPenguinRotation(-90);
+        }
+    }
+
+    private void SetPenguinRotation(float xRotation)
+    {
+        Vector3 rotation = penguinTransform.eulerAngles;
+        rotation.x = xRotation;
+        penguinTransform.eulerAngles = rotation;
     }
 }
