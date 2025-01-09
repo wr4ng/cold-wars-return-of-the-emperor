@@ -706,6 +706,7 @@ MonoBehaviour:
   rb: {fileID: 1671504067}
   forwardForce: 250
   rotationSpeed: 100
+  backwardForce: -250
 --- !u!54 &1671504067
 Rigidbody:
   m_ObjectHideFlags: 0
