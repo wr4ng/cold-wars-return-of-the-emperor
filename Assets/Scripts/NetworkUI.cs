@@ -15,30 +15,30 @@ public class NetworkUI : MonoBehaviour
 
     public void StartHost()
     {
-        NetworkManager.StartServer(hostInputField.text, int.Parse(portInputField.text));
+        NetworkManager.Instance.StartServer(hostInputField.text, int.Parse(portInputField.text));
         connectUI.SetActive(false);
     }
 
     public void StartClient()
     {
-        NetworkManager.StartClient(hostInputField.text, int.Parse(portInputField.text));
+        NetworkManager.Instance.StartClient(hostInputField.text, int.Parse(portInputField.text));
         connectUI.SetActive(false);
     }
 
     public void Quit()
     {
-        NetworkManager.Close();
+        NetworkManager.Instance.Close();
         connectUI.SetActive(true);
     }
 
     private void Update()
     {
-        quitButton.gameObject.SetActive(NetworkManager.isRunning);
-        if (!NetworkManager.isRunning)
+        quitButton.gameObject.SetActive(NetworkManager.Instance.isRunning);
+        if (!NetworkManager.Instance.isRunning)
         {
             statusText.text = "Status: Not connected";
             return;
         }
-        statusText.text = "Status: " + (NetworkManager.isServer ? "Host" : "Client");
+        statusText.text = "Status: " + (NetworkManager.Instance.isServer ? "Host" : "Client");
     }
 }

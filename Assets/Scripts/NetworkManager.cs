@@ -10,18 +10,37 @@ using UnityEngine;
 
 public class NetworkManager : MonoBehaviour
 {
-    private static SpaceRepository repository;
-    private static string connectionString;
-    private static ISpace serverSpace;
+    public static NetworkManager Instance;
 
-    private static ISpace mySpace;
+    [SerializeField] public GameObject remotePlayerPrefab;
 
-    public static bool isServer { get; private set; } = false;
-    public static bool isRunning { get; private set; } = false;
+    private SpaceRepository repository;
+    private string connectionString;
+    private ISpace serverSpace;
 
-    private static Thread serverThread;
+    private int numClients = 0;
 
-    public static void StartServer(string host, int port)
+    private ISpace mySpace;
+
+    public bool isServer { get; private set; } = false;
+    public bool isRunning { get; private set; } = false;
+
+    private Thread serverThread;
+    private Thread clientThread;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Debug.LogError("Multiple NetworkManagers!");
+        }
+    }
+
+    public void StartServer(string host, int port)
     {
         // Setup server repository
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
@@ -35,24 +54,42 @@ public class NetworkManager : MonoBehaviour
         serverThread = new Thread(() => RunServerListen());
         serverThread.Start();
 
+        // Start client thread
+        clientThread = new Thread(() => RunClientListen());
+        clientThread.Start();
+
+        numClients = 1;
+
         isServer = true;
         isRunning = true;
         Debug.Log("Server started with connection string: " + connectionString);
     }
 
-    public static void StartClient(string host, int port)
+    public void StartClient(string host, int port)
     {
         connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);
         Debug.Log("Trying to connect to: " + connectionString + "...");
         serverSpace = new RemoteSpace(connectionString);
         serverSpace.Put("join");
 
+        ITuple tuple = serverSpace.Get("players", typeof(int));
+        numClients = (int)tuple[1];
+
+        for (int i = 0; i < numClients - 1; i++)
+        {
+            Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
+        }
+
+        // Start client thread
+        clientThread = new Thread(() => RunClientListen());
+        clientThread.Start();
+
         isServer = false;
         isRunning = true;
         Debug.Log("Connected to: " + connectionString);
     }
 
-    public static void Close()
+    public void Close()
     {
         if (isRunning)
         {
@@ -62,12 +99,19 @@ public class NetworkManager : MonoBehaviour
                 Debug.Log("Closing server...");
                 if (serverThread.IsAlive)
                 {
-                    serverSpace.Put("stop"); // To resolve serverSpace.getAll() call in RunServerListen(). Can maybe also just abort thread?
+                    serverThread.Abort();
+                    serverThread.Join();
                 }
-                serverThread.Join();
                 repository.CloseGate(connectionString);
                 Debug.Log("Server closed");
             }
+            Debug.Log("Closing client...");
+            if (clientThread.IsAlive)
+            {
+                clientThread.Abort();
+                clientThread.Join();
+            }
+            Debug.Log("Client closed");
         }
     }
 
@@ -91,7 +135,7 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    private static void RunServerListen()
+    private void RunServerListen()
     {
         Debug.Log("[server] server listen thread started...");
         while (isRunning)
@@ -100,7 +144,26 @@ public class NetworkManager : MonoBehaviour
 
             foreach (ITuple t in tuples)
             {
-                Debug.Log(t[0]);
+                string message = (string)t[0];
+                Debug.Log(message);
+                if (message == "join")
+                {
+                    numClients++;
+                    serverSpace.Put("players", numClients);
+                }
+            }
+        }
+    }
+
+    private void RunClientListen()
+    {
+        Debug.Log("[client] client listen thread started...");
+        while (isRunning)
+        {
+            IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string));
+
+            foreach (ITuple t in tuples)
+            {
             }
         }
     }
