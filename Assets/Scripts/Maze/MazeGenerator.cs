@@ -9,6 +9,7 @@ public class MazeGenerator : MonoBehaviour{
     private const int wallLength = 4;
     
     public GameObject wallPrefab;
+    public GameObject groundPrefab;
 
     // variables used when finding offset
     private int hW; // halfWidth
@@ -105,6 +106,7 @@ public class MazeGenerator : MonoBehaviour{
     }
 
     private void placeBorder(int width, int height){
+        Instantiate(groundPrefab, new(0, 0, 0), Quaternion.identity).transform.localScale = new Vector3((width*wallLength)/10.0f, 1, (height*wallLength)/10.0f);
         // Origo
         (int i, int j) = (-hW + hWL, hH - hWL);
 
