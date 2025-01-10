@@ -1,19 +1,27 @@
+using System.Threading;
 using UnityEngine;
 
 public class MazeGenerator : MonoBehaviour{
+    public GameObject wallPrefab;
     public const int HORIZONTAL = 1;
     private const int VERTICAL = 2;
+
+    private const int wallLength = 4;
+    private const int wallWidth = 1;
+    private static int groundWidth;
+    private static int groundHeight;
+
 
     public const int S = 1;
     public const int E = 2;
     // public int[,] maze;
-    private int seed = 0;
-    private int height,width;
 
     public void setSeed(int seed){
-        this.seed = seed;
+        Random.InitState(seed);
     }
     public void PrintMaze(int[,] maze){
+        int width = maze.GetLength(0);
+        int height = maze.GetLength(1);
         string m = "";
         for (int i = 0; i < width*2; i++){
             m += "_";
@@ -33,13 +41,14 @@ public class MazeGenerator : MonoBehaviour{
         Debug.Log(m);
     }
 
-    private int ChooseOrientation(int w, int h){
+    private static int ChooseOrientation(int w, int h){
         if (w < h) return HORIZONTAL;
         if (w > h) return VERTICAL;
         return Random.Range(1,2);
     }
 
-    public void Divide(int[,] maze, int x, int y, int width, int height, int orientation){
+    private void Divide(int[,] maze, int x, int y, int width, int height, int orientation){
+
         if (width < 2 || height < 2) return;
 
         // PrintMaze(maze);
@@ -64,6 +73,9 @@ public class MazeGenerator : MonoBehaviour{
         for (int i = 0; i < length; i++){
             if (wallX != passX || wallY != passY){
                 maze[wallX,wallY] |= direction;
+                Vector3 position = (orientation == HORIZONTAL) ? new(-groundWidth/2 + wallLength*wallX + wallLength/2, 0, groundHeight/2 - wallLength*wallY - wallLength) : new(-groundWidth/2 + wallLength*wallX + wallLength, 0, groundHeight/2 - wallLength*wallY - wallLength/2);
+                Quaternion angle = (orientation == HORIZONTAL) ? Quaternion.identity : Quaternion.Euler(0,90,0);
+                Instantiate(wallPrefab, position, angle);
             }
             wallX += dx;
             wallY += dy;
@@ -81,21 +93,40 @@ public class MazeGenerator : MonoBehaviour{
         Divide(maze, newX, newY, newWidth, newHeight, ChooseOrientation(newWidth, newHeight));
     }
 
-    public void GenerateMaze(int[,] maze){
-        width = Random.Range(5,10);
-        height = Random.Range(5,10);
-        maze = new int[width,height];
-        Divide(maze ,0,0,width,height, HORIZONTAL);
+    private void placeBorder(int width, int height){
+        for(int x = 0; x < width; x++){
+            Vector3 posTop = new(-groundWidth/2 + wallLength*x + wallLength/2, 0, -groundHeight/2);
+            Vector3 posBot = new(-groundWidth/2 + wallLength*x + wallLength/2, 0, groundHeight/2);
+            Quaternion angle = Quaternion.identity;
+            Instantiate(wallPrefab, posTop, angle);
+            Instantiate(wallPrefab, posBot, angle);
+        }
+        for(int y = 0; y < height; y++){
+            Vector3 posTop = new(-groundWidth/2, 0, -groundHeight/2 + wallLength*y + wallLength/2);
+            Vector3 posBot = new(groundWidth/2, 0, -groundHeight/2 + wallLength*y + wallLength/2);
+            Quaternion angle = Quaternion.Euler(0,90,0);
+            Instantiate(wallPrefab, posTop, angle);
+            Instantiate(wallPrefab, posBot, angle);
+        }
+    }
+
+    public void GenerateMaze(int[,] maze, int width, int height){
+        groundWidth = width * wallLength;
+        groundHeight = height * wallLength;
+        placeBorder(width,height);
+        Divide(maze, 0, 0, width, height, HORIZONTAL);
         PrintMaze(maze);
-        // MazeWall dinmor = new();
-        // dinmor.PlaceLabyrinth(maze, width,height);
     }
 
     private void Update(){
         if (Input.GetKeyDown(KeyCode.L)){
             Debug.Log("Generating Maze");
-            
-            // GenerateMaze();
+            int[,] maze;
+            int width = Random.Range(5,10);
+            int height = Random.Range(5,10);
+            maze = new int[width,height]; 
+            GenerateMaze(maze, width, height);
+            PrintMaze(maze);
             
         }
     }
