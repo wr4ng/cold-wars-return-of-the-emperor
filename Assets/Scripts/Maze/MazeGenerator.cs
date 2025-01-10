@@ -9,8 +9,11 @@ public class MazeGenerator : MonoBehaviour{
     private const int wallLength = 4;
     
     public GameObject wallPrefab;
-    private int groundWidth;
-    private int groundHeight;
+
+    // variables used when finding offset
+    private int hW; // halfWidth
+    private int hH; // halfHeight
+    private int hWL = wallLength/2; // halfWallLength
 
     int[,] maze;
 
@@ -46,6 +49,7 @@ public class MazeGenerator : MonoBehaviour{
         return VERTICAL;
     }
 
+    // placeWalls input is to determine if we use seperate function to place the maze - can be removed when we figure it out.
     private void Divide(int[,] maze, int x, int y, int width, int height, int orientation, bool placeWalls = false){
         // return if corridor is one wide
         if (width <= 1 || height <= 1) return;
@@ -68,10 +72,6 @@ public class MazeGenerator : MonoBehaviour{
         int length = hori ? width : height;
         int direction = hori ? S : E;
 
-        // Just here for readability
-        int hW = groundWidth/2;
-        int hH = groundHeight/2;
-        int hWL = wallLength/2;
         // Offset
         (int i, int j) = hori ? (-hW + hWL, hH - wallLength) : (-hW + wallLength, hH - hWL);
 
@@ -105,10 +105,6 @@ public class MazeGenerator : MonoBehaviour{
     }
 
     private void placeBorder(int width, int height){
-        // Just here for readability
-        int hW = groundWidth/2;
-        int hH = groundHeight/2;
-        int hWL = wallLength/2;
         // Origo
         (int i, int j) = (-hW + hWL, hH - hWL);
 
@@ -131,8 +127,8 @@ public class MazeGenerator : MonoBehaviour{
         int width = Random.Range(lowerBound, upperBound);
         int height = Random.Range(lowerBound, upperBound);
         maze = new int[width, height];
-        groundWidth = width * wallLength;
-        groundHeight = height * wallLength;
+        hW = width * wallLength/2;
+        hH = height * wallLength/2;
 
         placeBorder(width,height);
         Divide(maze, 0, 0, width, height, HORIZONTAL, true);
@@ -145,10 +141,6 @@ public class MazeGenerator : MonoBehaviour{
         int height = maze.GetLength(1);
         placeBorder(width, height);
 
-        // Just here for readability
-        int hW = groundWidth/2;
-        int hH = groundHeight/2;
-        int hWL = wallLength/2;
         // Offset
         (int iHori, int jHori) = (-hW + hWL, hH - wallLength);
         (int iVert, int jVert) = (-hW + wallLength, hH - hWL);
