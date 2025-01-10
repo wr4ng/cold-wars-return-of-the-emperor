@@ -1,12 +1,12 @@
 using UnityEngine;
 
 public class MazeGenerator : MonoBehaviour{
-    private const int HORIZONTAL = 1;
+    public const int HORIZONTAL = 1;
     private const int VERTICAL = 2;
 
     public const int S = 1;
     public const int E = 2;
-    public int[,] maze;
+    // public int[,] maze;
     private int seed = 0;
     private int height,width;
 
@@ -42,7 +42,7 @@ public class MazeGenerator : MonoBehaviour{
     public void Divide(int[,] maze, int x, int y, int width, int height, int orientation){
         if (width < 2 || height < 2) return;
 
-        PrintMaze(maze);
+        // PrintMaze(maze);
         bool hori = orientation == HORIZONTAL;
 
         // Wall position
@@ -81,18 +81,21 @@ public class MazeGenerator : MonoBehaviour{
         Divide(maze, newX, newY, newWidth, newHeight, ChooseOrientation(newWidth, newHeight));
     }
 
-    public void GenerateMaze(){
+    public void GenerateMaze(int[,] maze){
         width = Random.Range(5,10);
         height = Random.Range(5,10);
         maze = new int[width,height];
         Divide(maze ,0,0,width,height, HORIZONTAL);
+        PrintMaze(maze);
+        // MazeWall dinmor = new();
+        // dinmor.PlaceLabyrinth(maze, width,height);
     }
 
     private void Update(){
         if (Input.GetKeyDown(KeyCode.L)){
             Debug.Log("Generating Maze");
             
-            GenerateMaze();
+            // GenerateMaze();
             
         }
     }
