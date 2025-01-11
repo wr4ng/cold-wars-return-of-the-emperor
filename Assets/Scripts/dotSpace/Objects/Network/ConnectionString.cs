@@ -17,17 +17,17 @@ namespace dotSpace.Objects.Network
         /// </summary>
         public ConnectionString(string uri)
         {
-            Match match = new Regex(@"^(.+://){0,1}(.[^:\/\?]+)(:[0-9]+){0,1}(\/[a-zA-Z]+){0,1}(\?[a-zA-Z]+){0,1}$").Match(uri);
-            if (match.Success && match.Groups.Count == 6)
+            string pattern = @"^(?:(?<protocol>[a-zA-Z]+)://)?(?<host>[^:/?]+)(?::(?<port>\d+))?(?:/(?<target>[a-zA-Z0-9-]*))?(?:\?(?<mode>[A-Z]+))?$";
+            Match match = Regex.Match(uri, pattern);
+            if (!match.Success)
             {
-                string protocol = string.IsNullOrEmpty(match.Groups[1].Value) ? Protocol.TCP.ToString() : match.Groups[1].Value.TrimEnd(':', '/').ToUpper();
-                this.Protocol = (Protocol)Enum.Parse(typeof(Protocol), protocol);
-                this.Host = match.Groups[2].Value;
-                this.Port = string.IsNullOrEmpty(match.Groups[3].Value) ? 31415 : int.Parse(match.Groups[3].Value.TrimStart(':'));
-                this.Target = string.IsNullOrEmpty(match.Groups[4].Value) ? string.Empty : match.Groups[4].Value.TrimStart('/');
-                string mode = string.IsNullOrEmpty(match.Groups[5].Value) ? ConnectionMode.KEEP.ToString() : match.Groups[5].Value.TrimStart('?');
-                this.Mode = (ConnectionMode)Enum.Parse(typeof(ConnectionMode), mode);
+                throw new ArgumentException("invalid connectio string: " + uri);
             }
+            Protocol = match.Groups["protocol"].Success ? (Protocol)Enum.Parse(typeof(Protocol), match.Groups["protocol"].Value.ToUpper()) : Protocol.TCP;
+            Host = match.Groups["host"].Value;
+            Port = match.Groups["port"].Success ? int.Parse(match.Groups["port"].Value) : 31415;
+            Target = match.Groups["target"].Success ? match.Groups["target"].Value : string.Empty;
+            Mode = match.Groups["mode"].Success ? (ConnectionMode)Enum.Parse(typeof(ConnectionMode), match.Groups["mode"].Value) : ConnectionMode.KEEP;
         }
 
         #endregion
