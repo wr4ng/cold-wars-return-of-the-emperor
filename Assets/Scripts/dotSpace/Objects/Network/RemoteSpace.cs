@@ -214,7 +214,7 @@ namespace dotSpace.Objects.Network
                     {
                         throw new Exception("connection timeout");
                     }
-                    return new Tcp(new TcpClient(this.connectionString.Host, this.connectionString.Port));
+                    return new Tcp(tcpClient);
                 case Protocol.UDP: return new Udp(this.connectionString.Host, this.connectionString.Port);
                 default: return null;
             }
