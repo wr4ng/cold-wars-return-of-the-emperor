@@ -7,6 +7,8 @@ using dotSpace.Objects.Network;
 using dotSpace.Objects.Space;
 
 using UnityEngine;
+using System;
+using System.Net;
 
 public class NetworkManager : MonoBehaviour
 {
@@ -17,9 +19,11 @@ public class NetworkManager : MonoBehaviour
     private SpaceRepository repository;
     private string connectionString;
     private ISpace serverSpace;
+    private Dictionary<Guid, ISpace> clientSpaces;
+    private string host;
+    private int port;
 
-    private int numClients = 0;
-
+    private Guid myId;
     private ISpace mySpace;
 
     public bool isServer { get; private set; } = false;
@@ -42,13 +46,23 @@ public class NetworkManager : MonoBehaviour
 
     public void StartServer(string host, int port)
     {
-        // Setup server repository
+        //TODO Create type with method to create connectionString and gateString
+        this.host = host;
+        this.port = port;
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
+
+        // Setup server repository
         repository = new SpaceRepository();
         repository.AddGate(connectionString);
 
         serverSpace = new SequentialSpace();
         repository.AddSpace("server", serverSpace);
+
+        // Setup local client repository
+        //TODO: Setup local client as remote to share code
+        myId = Guid.NewGuid();
+        mySpace = new SequentialSpace();
+        clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
 
         // Start server thread
         serverThread = new Thread(() => RunServerListen());
@@ -57,8 +71,6 @@ public class NetworkManager : MonoBehaviour
         // Start client thread
         clientThread = new Thread(() => RunClientListen());
         clientThread.Start();
-
-        numClients = 1;
 
         isServer = true;
         isRunning = true;
@@ -71,14 +83,21 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("Trying to connect to: " + connectionString + "...");
         serverSpace = new RemoteSpace(connectionString);
         serverSpace.Put("join");
+        Debug.Log("Connected to: " + connectionString);
 
-        ITuple tuple = serverSpace.Get("players", typeof(int));
-        numClients = (int)tuple[1];
+        ITuple tuple = serverSpace.Get("id", typeof(string));
+        myId = new Guid((string)tuple[1]);
 
-        for (int i = 0; i < numClients - 1; i++)
-        {
-            Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
-        }
+        Debug.Log("Received id: " + myId.ToString());
+
+        //TODO: Receive info on number of existing players
+
+        // Connect to private space
+        string privateConnectionString = string.Format("tcp://{0}:{1}/{2}?KEEP", host, port, myId.ToString());
+        Debug.Log("Trying to connect to: " + privateConnectionString + "...");
+        mySpace = new RemoteSpace(privateConnectionString);
+        mySpace.Put("ping"); // TODO: Determine if it's needed to send data to space to test connection
+        Debug.Log("Connected to: " + privateConnectionString);
 
         // Start client thread
         clientThread = new Thread(() => RunClientListen());
@@ -86,7 +105,6 @@ public class NetworkManager : MonoBehaviour
 
         isServer = false;
         isRunning = true;
-        Debug.Log("Connected to: " + connectionString);
     }
 
     public void Close()
@@ -125,8 +143,8 @@ public class NetworkManager : MonoBehaviour
         {
             try
             {
-                serverSpace.Put(Time.time.ToString());
-                Debug.Log("[client] sent timestamp to server");
+                serverSpace.Put("hello");
+                Debug.Log("[client] sent hello to server");
             }
             catch (SocketException e)
             {
@@ -146,12 +164,48 @@ public class NetworkManager : MonoBehaviour
             {
                 string message = (string)t[0];
                 Debug.Log(message);
-                if (message == "join")
+                switch (message)
                 {
-                    numClients++;
-                    serverSpace.Put("players", numClients);
+                    case "join":
+                        HandleJoin();
+                        break;
+                    case "hello":
+                        HandleHello();
+                        break;
+                    default:
+                        Debug.Log("unknown message: " + message);
+                        break;
                 }
             }
+        }
+    }
+
+    private void HandleJoin()
+    {
+        // Generate new ID for player
+        Guid id = Guid.NewGuid();
+
+        // Create new private space for player
+        ISpace clientSpace = new SequentialSpace();
+        clientSpaces[id] = clientSpace;
+        repository.AddSpace(id.ToString(), clientSpace);
+
+        // Send ID back to player
+        serverSpace.Put("id", id.ToString());
+
+        Debug.Log("New player joining with id: " + id.ToString());
+
+        // Create new player on local client
+        // TODO: Instead send message to all clientspaces with instructions to create new player
+        // TODO: Fix can only be called from the main thread. Use a queue that mainThread empties periodically
+        // Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
+    }
+
+    private void HandleHello()
+    {
+        // Write "someone said hello" to all connected clients
+        foreach (ISpace clientSpace in clientSpaces.Values) {
+            clientSpace.Put("someone said hello!");
         }
     }
 
@@ -160,10 +214,11 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("[client] client listen thread started...");
         while (isRunning)
         {
-            IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string));
+            IEnumerable<ITuple> tuples = mySpace.GetAll(typeof(string));
 
             foreach (ITuple t in tuples)
             {
+                Debug.Log(t[0]);
             }
         }
     }
