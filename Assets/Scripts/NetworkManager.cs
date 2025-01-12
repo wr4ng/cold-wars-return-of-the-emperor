@@ -9,6 +9,7 @@ using dotSpace.Objects.Space;
 using UnityEngine;
 using System;
 using System.Net;
+using System.Collections.Concurrent;
 
 public class NetworkManager : MonoBehaviour
 {
@@ -31,6 +32,8 @@ public class NetworkManager : MonoBehaviour
 
     private Thread serverThread;
     private Thread clientThread;
+
+    private ConcurrentQueue<Action> pendingActions;
 
     private void Awake()
     {
@@ -63,6 +66,8 @@ public class NetworkManager : MonoBehaviour
         myId = Guid.NewGuid();
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
+
+        pendingActions = new ConcurrentQueue<Action>();
 
         // Start server thread
         serverThread = new Thread(() => RunServerListen());
@@ -139,16 +144,57 @@ public class NetworkManager : MonoBehaviour
         {
             return;
         }
-        if (Input.GetKeyDown(KeyCode.Space))
+        //TODO: Debugging setup. Sending Message object with 2 ints written in a tuple on the form ("hello", byte[])
+        if (Input.GetKeyDown(KeyCode.S))
         {
             try
             {
-                serverSpace.Put("hello");
+                Message m = new Message();
+                m.WriteInt(1234);
+                m.WriteInt(-42);
+
+                serverSpace.Put("hello", m.ToArray());
                 Debug.Log("[client] sent hello to server");
             }
             catch (SocketException e)
             {
                 Debug.Log("[client] failed to send timestamp: " + e.ToString());
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            try
+            {
+                ITuple t = serverSpace.GetP(typeof(string), typeof(byte[]));
+                if (t == null)
+                {
+                    Debug.Log("[client] Nothing there...");
+                    return;
+                }
+                Message m = new Message((byte[])t[1]);
+                Debug.Log("[client] " + t[0] + ", " + m.ReadInt() + ", " + m.ReadInt());
+            }
+            catch (SocketException e)
+            {
+
+                Debug.Log("[client] failed to send timestamp: " + e.ToString());
+            }
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (isServer && isRunning)
+        {
+            while (!pendingActions.IsEmpty)
+            {
+                bool success = pendingActions.TryDequeue(out Action action);
+                if (!success)
+                {
+                    Debug.LogError("failed to dequeue pending action");
+                    return;
+                }
+                action();
             }
         }
     }
@@ -197,14 +243,14 @@ public class NetworkManager : MonoBehaviour
 
         // Create new player on local client
         // TODO: Instead send message to all clientspaces with instructions to create new player
-        // TODO: Fix can only be called from the main thread. Use a queue that mainThread empties periodically
-        // Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
+        pendingActions.Enqueue(() => Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity));
     }
 
     private void HandleHello()
     {
         // Write "someone said hello" to all connected clients
-        foreach (ISpace clientSpace in clientSpaces.Values) {
+        foreach (ISpace clientSpace in clientSpaces.Values)
+        {
             clientSpace.Put("someone said hello!");
         }
     }
