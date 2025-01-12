@@ -86,7 +86,8 @@ namespace dotSpace.Objects.Network.Gates
             }
             catch (Exception e)
             {
-                // TODO: Error handling: throw e;
+                // TODO: Error handling
+                throw e;
             }
             finally
             {
