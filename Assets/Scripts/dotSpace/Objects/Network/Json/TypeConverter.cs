@@ -17,7 +17,7 @@ namespace dotSpace.Objects.Json
         private static Dictionary<string, Type> unboxedTypes;
         private static Dictionary<Type, string> boxedTypes;
 
-        private static Dictionary<string,string> typeToString;
+        private static Dictionary<string, string> typeToString;
 
         #endregion
 
@@ -31,10 +31,10 @@ namespace dotSpace.Objects.Json
         {
             unboxedTypes = new Dictionary<string, Type>();
             boxedTypes = new Dictionary<Type, string>();
-            typeToString = new Dictionary<string, string>();
-            typeToString.Add("int32", "int");
-            typeToString.Add("int64", "long");
+            typeToString = new Dictionary<string, string>{{ "int32", "int" }, { "int64", "long" }};
 
+            AddType("byte", typeof(byte));
+            AddType("byte[]", typeof(byte[]));
             AddType("string", typeof(string));
             AddType("int", typeof(int));
             AddType("float", typeof(float));
@@ -82,7 +82,7 @@ namespace dotSpace.Objects.Json
                 if (val is JsonElement)
                 {
                     var value = (JsonElement)val;
-                    
+
                     if (value.TryGetProperty("Value", out JsonElement _))
                     {
                         unboxedValues.Add(UnboxType(value.GetProperty("TypeName").GetString(), value.GetProperty("Value")));
@@ -95,7 +95,7 @@ namespace dotSpace.Objects.Json
                 // As it sometimes manages to do it correctly.
                 else
                 {
-                    if(val is Type)
+                    if (val is Type)
                     {
                         unboxedValues.Add(UnboxType(((Type)val).Name.ToLower()));
                     }
@@ -162,7 +162,7 @@ namespace dotSpace.Objects.Json
 
         private static object UnboxType(string typename, object value)
         {
-            if(typeToString.ContainsKey(typename)) typename = typeToString[typename];
+            if (typeToString.ContainsKey(typename)) typename = typeToString[typename];
 
             if (unboxedTypes.ContainsKey(typename))
             {
