@@ -152,6 +152,7 @@ public class NetworkManager : MonoBehaviour
                 Message m = new Message();
                 m.WriteInt(1234);
                 m.WriteInt(-42);
+                m.WriteString("yeet");
 
                 serverSpace.Put("hello", m.ToArray());
                 Debug.Log("[client] sent hello to server");
@@ -172,7 +173,7 @@ public class NetworkManager : MonoBehaviour
                     return;
                 }
                 Message m = new Message((byte[])t[1]);
-                Debug.Log("[client] " + t[0] + ", " + m.ReadInt() + ", " + m.ReadInt());
+                Debug.Log("[client] " + t[0] + ", " + m.ReadInt() + ", " + m.ReadInt() + ", " + m.ReadString());
             }
             catch (SocketException e)
             {
