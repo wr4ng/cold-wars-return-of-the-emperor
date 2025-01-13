@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text;
+using dotSpace.Objects.Space;
 
 public class Message
 {
+    //TODO: Create FromTuple and ToTuple methods to allow easy interface
+    //TODO: public static Pattern TuplePattern = new Pattern(typeof(string), typeof(byte[]));
+
     private List<byte> writeBuffer;
     private byte[] readBuffer;
     private int readIndex;
@@ -61,4 +65,19 @@ public class Message
         return value;
     }
 
+    public void WriteBool(bool value)
+    {
+        writeBuffer.Add((byte)(value ? 1 : 0));
+    }
+
+    public bool ReadBool()
+    {
+        if (readIndex + sizeof(bool) > readBuffer.Length)
+        {
+            throw new InvalidOperationException("not enough data in Message buffer");
+        }
+        byte value = readBuffer[readIndex];
+        readIndex += 1;
+        return (value == (byte)1) ? true : false;
+    }
 }

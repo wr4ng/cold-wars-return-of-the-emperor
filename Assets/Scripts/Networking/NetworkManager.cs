@@ -87,7 +87,7 @@ public class NetworkManager : MonoBehaviour
         connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);
         Debug.Log("Trying to connect to: " + connectionString + "...");
         serverSpace = new RemoteSpace(connectionString);
-        serverSpace.Put("join");
+        serverSpace.Put(MessageType.JoinRequest.ToString(), new byte[0]);
         Debug.Log("Connected to: " + connectionString);
 
         ITuple tuple = serverSpace.Get("id", typeof(string));
@@ -120,6 +120,7 @@ public class NetworkManager : MonoBehaviour
             if (IsServer)
             {
                 Debug.Log("Closing server...");
+                repository.CloseGate(connectionString);
                 if (serverThread.IsAlive)
                 {
                     serverThread.Abort();
@@ -141,6 +142,7 @@ public class NetworkManager : MonoBehaviour
     private void Update()
     {
         if (!IsRunning) { return; }
+
         //TODO: Debugging setup
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -151,30 +153,11 @@ public class NetworkManager : MonoBehaviour
                 m.WriteInt(-42);
                 m.WriteString("yeet");
 
-                serverSpace.Put("hello", m.ToArray());
+                serverSpace.Put(MessageType.Hello.ToString(), m.ToArray());
                 Debug.Log("[client] sent hello to server");
             }
             catch (SocketException e)
             {
-                Debug.Log("[client] failed to send timestamp: " + e.ToString());
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            try
-            {
-                ITuple t = serverSpace.GetP(typeof(string), typeof(byte[]));
-                if (t == null)
-                {
-                    Debug.Log("[client] Nothing there...");
-                    return;
-                }
-                Message m = new Message((byte[])t[1]);
-                Debug.Log("[client] " + t[0] + ", " + m.ReadInt() + ", " + m.ReadInt() + ", " + m.ReadString());
-            }
-            catch (SocketException e)
-            {
-
                 Debug.Log("[client] failed to send timestamp: " + e.ToString());
             }
         }
@@ -202,22 +185,27 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("[server] server listen thread started...");
         while (IsRunning)
         {
-            IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string));
+            IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string), typeof(byte[]));
 
             foreach (ITuple t in tuples)
             {
-                string message = (string)t[0];
-                Debug.Log(message);
-                switch (message)
+                string type = (string)t[0];
+                Message data = new Message((byte[])t[1]);
+
+                MessageType messageType = MessageTypeHelper.Parse(type);
+                Debug.Log(messageType);
+
+                //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
+                switch (messageType)
                 {
-                    case "join":
+                    case MessageType.Hello:
+                        HandleHello(data);
+                        break;
+                    case MessageType.JoinRequest:
                         HandleJoin();
                         break;
-                    case "hello":
-                        HandleHello();
-                        break;
                     default:
-                        Debug.Log("unknown message: " + message);
+                        Debug.Log("unknown MessageType: " + messageType);
                         break;
                 }
             }
@@ -259,9 +247,10 @@ public class NetworkManager : MonoBehaviour
         pendingActions.Enqueue(() => Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity));
     }
 
-    private void HandleHello()
+    private void HandleHello(Message data)
     {
-        // Write "someone said hello" to all connected clients
+
+        Debug.Log("[hello] " + data.ReadInt() + ", " + data.ReadInt() + ", " + data.ReadString());
         foreach (ISpace clientSpace in clientSpaces.Values)
         {
             clientSpace.Put("someone said hello!");
