@@ -1,26 +1,27 @@
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerShooting : MonoBehaviour
 {
-    public float bulletSpeed, fireRate;
-    public Transform bulletSpawnTransform;
 
+    public Transform bulletSpawnPoint;
     public GameObject bulletPrefab;
-
+    public float bulletSpeed = 10f;
+    public float fireRate = 0.5f;
     private float timer;
+
+    [SerializeField]
+    private InputActionReference shootAction;
 
     // Update is called once per frame
     void Update()
     {
-        if (timer > 0)
+        if (shootAction.action.triggered)
         {
-            timer -= Time.deltaTime / fireRate;
-        }
+            var bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
+            bullet.GetComponent<Rigidbody>().linearVelocity = bulletSpawnPoint.forward * bulletSpeed;
 
-        if (Input.GetKeyDown(KeyCode.Space) && timer <= 0)
-        {
-            Shoot();
         }
 
         // if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out RaycastHit hitInfo, 20f))
@@ -34,12 +35,12 @@ public class PlayerShooting : MonoBehaviour
         // }
     }
 
-    void Shoot()
+    /* void Shoot()
     {
         GameObject bullet = Instantiate(bulletPrefab, bulletSpawnTransform.position, Quaternion.identity);
         bullet.GetComponent<Rigidbody>().AddForce(bulletSpawnTransform.forward * bulletSpeed, ForceMode.Impulse);
 
         timer = 1;
 
-    }
+    } */
 }
