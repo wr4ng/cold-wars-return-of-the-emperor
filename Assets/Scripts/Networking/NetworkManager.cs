@@ -27,8 +27,8 @@ public class NetworkManager : MonoBehaviour
     private Guid myId;
     private ISpace mySpace;
 
-    public bool isServer { get; private set; } = false;
-    public bool isRunning { get; private set; } = false;
+    public bool IsServer { get; private set; } = false;
+    public bool IsRunning { get; private set; } = false;
 
     private Thread serverThread;
     private Thread clientThread;
@@ -77,8 +77,8 @@ public class NetworkManager : MonoBehaviour
         clientThread = new Thread(() => RunClientListen());
         clientThread.Start();
 
-        isServer = true;
-        isRunning = true;
+        IsServer = true;
+        IsRunning = true;
         Debug.Log("Server started with connection string: " + connectionString);
     }
 
@@ -108,16 +108,16 @@ public class NetworkManager : MonoBehaviour
         clientThread = new Thread(() => RunClientListen());
         clientThread.Start();
 
-        isServer = false;
-        isRunning = true;
+        IsServer = false;
+        IsRunning = true;
     }
 
     public void Close()
     {
-        if (isRunning)
+        if (IsRunning)
         {
-            isRunning = false;
-            if (isServer)
+            IsRunning = false;
+            if (IsServer)
             {
                 Debug.Log("Closing server...");
                 if (serverThread.IsAlive)
@@ -140,12 +140,9 @@ public class NetworkManager : MonoBehaviour
 
     private void Update()
     {
-        if (!isRunning)
-        {
-            return;
-        }
-        //TODO: Debugging setup. Sending Message object with 2 ints written in a tuple on the form ("hello", byte[])
-        if (Input.GetKeyDown(KeyCode.S))
+        if (!IsRunning) { return; }
+        //TODO: Debugging setup
+        if (Input.GetKeyDown(KeyCode.Space))
         {
             try
             {
@@ -185,7 +182,7 @@ public class NetworkManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isServer && isRunning)
+        if (IsServer && IsRunning)
         {
             while (!pendingActions.IsEmpty)
             {
@@ -203,7 +200,7 @@ public class NetworkManager : MonoBehaviour
     private void RunServerListen()
     {
         Debug.Log("[server] server listen thread started...");
-        while (isRunning)
+        while (IsRunning)
         {
             IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string));
 
@@ -223,6 +220,21 @@ public class NetworkManager : MonoBehaviour
                         Debug.Log("unknown message: " + message);
                         break;
                 }
+            }
+        }
+    }
+
+    private void RunClientListen()
+    {
+        Debug.Log("[client] client listen thread started...");
+        while (IsRunning)
+        {
+            //TODO: Setup using MessageType & Message
+            IEnumerable<ITuple> tuples = mySpace.GetAll(typeof(string));
+
+            foreach (ITuple t in tuples)
+            {
+                Debug.Log(t[0]);
             }
         }
     }
@@ -253,20 +265,6 @@ public class NetworkManager : MonoBehaviour
         foreach (ISpace clientSpace in clientSpaces.Values)
         {
             clientSpace.Put("someone said hello!");
-        }
-    }
-
-    private void RunClientListen()
-    {
-        Debug.Log("[client] client listen thread started...");
-        while (isRunning)
-        {
-            IEnumerable<ITuple> tuples = mySpace.GetAll(typeof(string));
-
-            foreach (ITuple t in tuples)
-            {
-                Debug.Log(t[0]);
-            }
         }
     }
 }

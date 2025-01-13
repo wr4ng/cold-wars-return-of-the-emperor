@@ -33,12 +33,12 @@ public class NetworkUI : MonoBehaviour
 
     private void Update()
     {
-        quitButton.gameObject.SetActive(NetworkManager.Instance.isRunning);
-        if (!NetworkManager.Instance.isRunning)
+        quitButton.gameObject.SetActive(NetworkManager.Instance.IsRunning);
+        if (!NetworkManager.Instance.IsRunning)
         {
             statusText.text = "Status: Not connected";
             return;
         }
-        statusText.text = "Status: " + (NetworkManager.Instance.isServer ? "Host" : "Client");
+        statusText.text = "Status: " + (NetworkManager.Instance.IsServer ? "Host" : "Client");
     }
 }
