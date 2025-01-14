@@ -5,6 +5,7 @@ public enum MessageType
 {
     Hello, //TODO: Remove once unused
     JoinRequest,
+    ServerPosition,
 }
 
 public static class MessageTypeHelper

@@ -2,11 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+using UnityEngine;
+
 using dotSpace.Interfaces.Space;
+using dotSpace.Objects.Space;
 using Tuple = dotSpace.Objects.Space.Tuple;
 
 public class Message
 {
+    public static Pattern MessagePattern = new Pattern(typeof(string), typeof(byte[]));
+
     public readonly MessageType Type;
     private List<byte> writeBuffer;
     private byte[] readBuffer;
@@ -83,5 +88,33 @@ public class Message
         byte value = readBuffer[readIndex];
         readIndex += 1;
         return (value == (byte)1) ? true : false;
+    }
+
+    public void WriteFloat(float value)
+    {
+        writeBuffer.AddRange(BitConverter.GetBytes(value));
+    }
+
+    public float ReadFloat()
+    {
+        if (readIndex + sizeof(float) > readBuffer.Length)
+        {
+            throw new InvalidOperationException("not enough data in Message buffer");
+        }
+        float value = BitConverter.ToSingle(readBuffer, readIndex);
+        readIndex += sizeof(float);
+        return value;
+    }
+
+    public void WriteVector3(Vector3 value)
+    {
+        WriteFloat(value.x);
+        WriteFloat(value.y);
+        WriteFloat(value.z);
+    }
+
+    public Vector3 ReadVector3()
+    {
+        return new Vector3(ReadFloat(), ReadFloat(), ReadFloat());
     }
 }

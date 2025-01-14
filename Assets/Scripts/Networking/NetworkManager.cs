@@ -33,7 +33,11 @@ public class NetworkManager : MonoBehaviour
     private Thread serverThread;
     private Thread clientThread;
 
-    private ConcurrentQueue<Action> pendingActions;
+    //TODO: Remove!
+    [SerializeField] private Transform hostPlayer;
+    [SerializeField] private Transform clientHostTransform;
+
+    private ConcurrentQueue<Action> pendingActions = new();
 
     private void Awake()
     {
@@ -66,8 +70,6 @@ public class NetworkManager : MonoBehaviour
         myId = Guid.NewGuid();
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
-
-        pendingActions = new ConcurrentQueue<Action>();
 
         // Start server thread
         serverThread = new Thread(() => RunServerListen());
@@ -161,11 +163,30 @@ public class NetworkManager : MonoBehaviour
                 Debug.Log("[client] failed to send timestamp: " + e.ToString());
             }
         }
+
+        //TODO: Network transform test
+        if (IsServer && Input.GetKeyDown(KeyCode.P))
+        {
+            try
+            {
+                Message m = new Message(MessageType.ServerPosition);
+                m.WriteVector3(hostPlayer.position);
+                //TODO: Create Broadcast method that sends a message to all client spaces (maybe except one like not client on the given host)
+                foreach (ISpace clientSpace in clientSpaces.Values)
+                {
+                    clientSpace.Put(m.ToTuple());
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("[server] failed to send position: " + e.ToString());
+            }
+        }
     }
 
     private void FixedUpdate()
     {
-        if (IsServer && IsRunning)
+        if (IsRunning)
         {
             while (!pendingActions.IsEmpty)
             {
@@ -214,12 +235,24 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("[client] client listen thread started...");
         while (IsRunning)
         {
-            //TODO: Setup using MessageType & Message
-            IEnumerable<ITuple> tuples = mySpace.GetAll(typeof(string));
-
-            foreach (ITuple t in tuples)
+            //TODO: Hello isn't handled with the new system...
+            IEnumerable<ITuple> tuples = mySpace.GetAll(Message.MessagePattern);
+            foreach (ITuple tuple in tuples)
             {
-                Debug.Log(t[0]);
+                Message message = new Message(tuple);
+                Debug.Log(message.Type);
+
+                //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
+                switch (message.Type)
+                {
+                    case MessageType.ServerPosition:
+                        HandleServerPositon(message);
+                        break;
+                    default:
+                        Debug.Log("unknown MessageType: " + message.Type);
+                        break;
+                }
+
             }
         }
     }
@@ -252,5 +285,11 @@ public class NetworkManager : MonoBehaviour
         {
             clientSpace.Put("someone said hello!");
         }
+    }
+
+    private void HandleServerPositon(Message message)
+    {
+        Vector3 hostPosition = message.ReadVector3();
+        pendingActions.Enqueue(() => { clientHostTransform.position = hostPosition; });
     }
 }
