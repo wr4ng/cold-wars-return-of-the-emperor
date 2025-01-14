@@ -148,12 +148,12 @@ public class NetworkManager : MonoBehaviour
         {
             try
             {
-                Message m = new Message();
+                Message m = new Message(MessageType.Hello);
                 m.WriteInt(1234);
                 m.WriteInt(-42);
                 m.WriteString("yeet");
 
-                serverSpace.Put(MessageType.Hello.ToString(), m.ToArray());
+                serverSpace.Put(m.ToTuple());
                 Debug.Log("[client] sent hello to server");
             }
             catch (SocketException e)
@@ -189,23 +189,20 @@ public class NetworkManager : MonoBehaviour
 
             foreach (ITuple t in tuples)
             {
-                string type = (string)t[0];
-                Message data = new Message((byte[])t[1]);
-
-                MessageType messageType = MessageTypeHelper.Parse(type);
-                Debug.Log(messageType);
+                Message message = new Message(t);
+                Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
-                switch (messageType)
+                switch (message.Type)
                 {
                     case MessageType.Hello:
-                        HandleHello(data);
+                        HandleHello(message);
                         break;
                     case MessageType.JoinRequest:
                         HandleJoin();
                         break;
                     default:
-                        Debug.Log("unknown MessageType: " + messageType);
+                        Debug.Log("unknown MessageType: " + message.Type);
                         break;
                 }
             }

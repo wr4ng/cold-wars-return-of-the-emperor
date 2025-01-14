@@ -1,30 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Text;
-using dotSpace.Objects.Space;
+
+using dotSpace.Interfaces.Space;
+using Tuple = dotSpace.Objects.Space.Tuple;
 
 public class Message
 {
-    //TODO: Create FromTuple and ToTuple methods to allow easy interface
-    //TODO: public static Pattern TuplePattern = new Pattern(typeof(string), typeof(byte[]));
-
+    public readonly MessageType Type;
     private List<byte> writeBuffer;
     private byte[] readBuffer;
     private int readIndex;
 
-    public Message()
+    // Create a new Message of the specified type. To be used when creating a Message to be sent over a tuple space
+    public Message(MessageType type)
     {
+        Type = type;
         writeBuffer = new();
     }
 
-    public Message(byte[] data)
+    // Create a Message from a tuple. To be used when receiving a tuple from a tuple space to read out values from buffer
+    public Message(ITuple tuple)
     {
-        readBuffer = data;
+        Type = MessageTypeHelper.Parse((string)tuple[0]);
+        readBuffer = (byte[])tuple[1];
         readIndex = 0;
     }
 
-    public byte[] ToArray() => writeBuffer.ToArray();
+    // Turn Message into a Tuple of the form (MESSAGE_TYPE, DATA) where DATA is a byte[] with values written to Message
+    public Tuple ToTuple() => new Tuple(Type.ToString(), writeBuffer.ToArray());
 
     public void WriteInt(int value)
     {
