@@ -17,10 +17,18 @@ public class PlayerShooting : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (shootAction.action.triggered)
+
+        if (timer > 0)
+        {
+            timer -= Time.deltaTime / fireRate;
+        }
+
+        if (shootAction.action.triggered && timer <= 0)
         {
             var bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
             bullet.GetComponent<Rigidbody>().linearVelocity = bulletSpawnPoint.forward * bulletSpeed;
+
+            timer = 1;
 
         }
 
