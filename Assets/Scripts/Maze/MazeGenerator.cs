@@ -18,8 +18,9 @@ public class MazeGenerator : MonoBehaviour{
 
     int[,] maze;
 
-    public MazeGenerator(int seed){
-        Random.InitState(seed);
+    public MazeGenerator(int seed = 0){
+        // :(
+        // Random.InitState(seed);
     }
 
     public void setSeed(int seed){
