@@ -12,10 +12,12 @@ public class Message
 {
     public static Pattern MessagePattern = new Pattern(typeof(string), typeof(byte[]));
 
-    public readonly MessageType Type;
+    public MessageType Type;
     private List<byte> writeBuffer;
     private byte[] readBuffer;
     private int readIndex;
+
+    private Message() { }
 
     // Create a new Message of the specified type. To be used when creating a Message to be sent over a tuple space
     public Message(MessageType type)
@@ -24,12 +26,25 @@ public class Message
         writeBuffer = new();
     }
 
-    // Create a Message from a tuple. To be used when receiving a tuple from a tuple space to read out values from buffer
-    public Message(ITuple tuple)
+    public byte[] ToBytes() => writeBuffer.ToArray();
+
+    public static Message FromBytes(byte[] data)
     {
-        Type = MessageTypeHelper.Parse((string)tuple[0]);
-        readBuffer = (byte[])tuple[1];
-        readIndex = 0;
+        Message m = new();
+        m.readBuffer = data;
+        m.readIndex = 0;
+        return m;
+    }
+
+    // Create a Message from a tuple. To be used when receiving a tuple from a tuple space to read out values from buffer
+    //TODO: Maybe Message.FromTuple() instead?
+    public static Message FromTuple(ITuple tuple)
+    {
+        Message m = new();
+        m.Type = MessageTypeHelper.Parse((string)tuple[0]);
+        m.readBuffer = (byte[])tuple[1];
+        m.readIndex = 0;
+        return m;
     }
 
     // Turn Message into a Tuple of the form (MESSAGE_TYPE, DATA) where DATA is a byte[] with values written to Message
@@ -116,5 +131,38 @@ public class Message
     public Vector3 ReadVector3()
     {
         return new Vector3(ReadFloat(), ReadFloat(), ReadFloat());
+    }
+
+    public void WriteGuid(Guid guid)
+    {
+        writeBuffer.AddRange(guid.ToByteArray());
+    }
+
+    public Guid ReadGuid()
+    {
+        // Guid is 16 bytes
+        if (readIndex + 16 > readBuffer.Length)
+        {
+            throw new InvalidOperationException("not enough data in Message buffer");
+        }
+        byte[] guidBytes = new byte[16];
+        Array.Copy(readBuffer, readIndex, guidBytes, 0, 16);
+        Guid value = new Guid(guidBytes);
+        readIndex += 16;
+        return value;
+    }
+
+    public void WriteEnum(Enum value)
+    {
+        WriteString(value.ToString());
+    }
+
+    public T ReadEnum<T>() where T : struct, Enum
+    {
+        string value = ReadString();
+        if (Enum.TryParse(value, false, out T result))
+            return result;
+        else
+            throw new ArgumentException($"'{value}' is not a valid {typeof(T).Name}");
     }
 }

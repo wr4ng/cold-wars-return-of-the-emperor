@@ -1,21 +1,18 @@
-using System.Net.Sockets;
+using System;
 using System.Threading;
+using System.Net.Sockets;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 using dotSpace.Interfaces.Space;
 using dotSpace.Objects.Network;
 using dotSpace.Objects.Space;
 
 using UnityEngine;
-using System;
-using System.Net;
-using System.Collections.Concurrent;
 
 public class NetworkManager : MonoBehaviour
 {
     public static NetworkManager Instance;
-
-    [SerializeField] public GameObject remotePlayerPrefab;
 
     private SpaceRepository repository;
     private string connectionString;
@@ -33,9 +30,12 @@ public class NetworkManager : MonoBehaviour
     private Thread serverThread;
     private Thread clientThread;
 
-    //TODO: Remove!
-    [SerializeField] private Transform hostPlayer;
-    [SerializeField] private Transform clientHostTransform;
+    // NetworkTransform management
+    [Header("Network Prefabs")]
+    [SerializeField]
+    private List<NetworkPrefab> networkPrefabs;
+    private Dictionary<EntityType, GameObject> networkPrefabMap = new();
+    private Dictionary<Guid, (EntityType, NetworkTransform)> networkTransforms = new();
 
     private ConcurrentQueue<Action> pendingActions = new();
 
@@ -48,6 +48,13 @@ public class NetworkManager : MonoBehaviour
         else
         {
             Debug.LogError("Multiple NetworkManagers!");
+        }
+
+        // Setup network prefabs as Dictionary instead of list
+        networkPrefabMap = new();
+        foreach (NetworkPrefab networkPrefab in networkPrefabs)
+        {
+            networkPrefabMap.Add(networkPrefab.type, networkPrefab.prefab);
         }
     }
 
@@ -70,6 +77,12 @@ public class NetworkManager : MonoBehaviour
         myId = Guid.NewGuid();
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
+        // Create local player for host
+        Guid myPlayerID = Guid.NewGuid();
+        GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], Vector3.zero, Quaternion.identity);
+        NetworkTransform myNetworkTransform = myPlayer.GetComponent<NetworkTransform>();
+        myNetworkTransform.ID = myPlayerID;
+        networkTransforms.Add(myPlayerID, (EntityType.LocalPlayer, myNetworkTransform));
 
         // Start server thread
         serverThread = new Thread(() => RunServerListen());
@@ -89,15 +102,20 @@ public class NetworkManager : MonoBehaviour
         connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);
         Debug.Log("Trying to connect to: " + connectionString + "...");
         serverSpace = new RemoteSpace(connectionString);
-        serverSpace.Put(MessageType.JoinRequest.ToString(), new byte[0]);
+
+        // Send JoinRequest
+        Message joinRequest = new(MessageType.JoinRequest);
+        serverSpace.Put(joinRequest.ToTuple());
         Debug.Log("Connected to: " + connectionString);
 
-        ITuple tuple = serverSpace.Get("id", typeof(string));
-        myId = new Guid((string)tuple[1]);
+        // Wait for JoinResponse
+        //TODO: Fix different for pattern when client need to read from serverspace
+        ITuple responseTuple = serverSpace.Get(0, MessageType.JoinResponse.ToString(), typeof(byte[]));
+        Message joinResponse = Message.FromBytes((byte[])responseTuple[2]);
+        myId = joinResponse.ReadGuid();
+        //TODO: Receive info on number of existing players
 
         Debug.Log("Received id: " + myId.ToString());
-
-        //TODO: Receive info on number of existing players
 
         // Connect to private space
         string privateConnectionString = string.Format("tcp://{0}:{1}/{2}?KEEP", host, port, myId.ToString());
@@ -163,25 +181,6 @@ public class NetworkManager : MonoBehaviour
                 Debug.Log("[client] failed to send timestamp: " + e.ToString());
             }
         }
-
-        //TODO: Network transform test
-        if (IsServer && Input.GetKeyDown(KeyCode.P))
-        {
-            try
-            {
-                Message m = new Message(MessageType.ServerPosition);
-                m.WriteVector3(hostPlayer.position);
-                //TODO: Create Broadcast method that sends a message to all client spaces (maybe except one like not client on the given host)
-                foreach (ISpace clientSpace in clientSpaces.Values)
-                {
-                    clientSpace.Put(m.ToTuple());
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.Log("[server] failed to send position: " + e.ToString());
-            }
-        }
     }
 
     private void FixedUpdate()
@@ -206,11 +205,11 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("[server] server listen thread started...");
         while (IsRunning)
         {
-            IEnumerable<ITuple> tuples = serverSpace.GetAll(typeof(string), typeof(byte[]));
+            IEnumerable<ITuple> tuples = serverSpace.GetAll(Message.MessagePattern);
 
             foreach (ITuple t in tuples)
             {
-                Message message = new Message(t);
+                Message message = Message.FromTuple(t);
                 Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
@@ -221,6 +220,9 @@ public class NetworkManager : MonoBehaviour
                         break;
                     case MessageType.JoinRequest:
                         HandleJoin();
+                        break;
+                    case MessageType.UpdateNetworkTransform:
+                        HandleUpdateNetworkTransform(message);
                         break;
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
@@ -239,14 +241,17 @@ public class NetworkManager : MonoBehaviour
             IEnumerable<ITuple> tuples = mySpace.GetAll(Message.MessagePattern);
             foreach (ITuple tuple in tuples)
             {
-                Message message = new Message(tuple);
+                Message message = Message.FromTuple(tuple);
                 Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
                 {
-                    case MessageType.ServerPosition:
-                        HandleServerPositon(message);
+                    case MessageType.InstatiateNetworkTransform:
+                        HandleInstantiateNetworkTransform(message);
+                        break;
+                    case MessageType.SetNetworkTransform:
+                        HandleSetNetworkTransform(message);
                         break;
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
@@ -268,15 +273,54 @@ public class NetworkManager : MonoBehaviour
         repository.AddSpace(id.ToString(), clientSpace);
 
         // Send ID back to player
-        serverSpace.Put("id", id.ToString());
+        Message m = new Message(MessageType.JoinResponse);
+        m.WriteGuid(id);
+        serverSpace.Put(0, MessageType.JoinResponse.ToString(), m.ToBytes());
 
         Debug.Log("New player joining with id: " + id.ToString());
 
-        // Create new player on local client
-        // TODO: Instead send message to all clientspaces with instructions to create new player
-        pendingActions.Enqueue(() => Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity));
+        // Send all other NetworkTransforms to new player
+        foreach (var (entityID, (entityType, networkTransform)) in networkTransforms)
+        {
+            //TODO: Fix this!
+            Message m2 = new(MessageType.InstatiateNetworkTransform);
+            m2.WriteGuid(entityID);
+            EntityType type = (entityType == EntityType.LocalPlayer) ? EntityType.RemotePlayer : entityType;
+            m2.WriteString(type.ToString());
+            m2.WriteVector3(networkTransform.GetPosition());
+            clientSpace.Put(m2.ToTuple());
+        }
+
+        // Create LocalPlayer at client and RemotePlayer at all others
+        // Generate ID for this entity
+        Guid newID = Guid.NewGuid();
+
+        // Create messages
+        Message newClientMessage = new(MessageType.InstatiateNetworkTransform);
+        Message otherClientsMessage = new(MessageType.InstatiateNetworkTransform);
+
+        newClientMessage.WriteGuid(newID);
+        otherClientsMessage.WriteGuid(newID);
+
+        newClientMessage.WriteString(EntityType.LocalPlayer.ToString());
+        otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
+
+        newClientMessage.WriteVector3(Vector3.zero);
+        otherClientsMessage.WriteVector3(Vector3.zero);
+
+        clientSpace.Put(newClientMessage.ToTuple());
+
+        //TODO: Rename variables to be more clear
+        foreach (var (cid, space) in clientSpaces)
+        {
+            if (id != cid)
+            {
+                space.Put(otherClientsMessage.ToTuple());
+            }
+        }
     }
 
+    //TODO: Remove once unused
     private void HandleHello(Message data)
     {
 
@@ -287,9 +331,66 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    private void HandleServerPositon(Message message)
+    private void HandleInstantiateNetworkTransform(Message message)
     {
-        Vector3 hostPosition = message.ReadVector3();
-        pendingActions.Enqueue(() => { clientHostTransform.position = hostPosition; });
+        // Create a NetworkTransform at a given position and rotation with given ID.
+        Guid entityID = message.ReadGuid();
+        EntityType type = message.ReadEnum<EntityType>();
+        Vector3 position = message.ReadVector3();
+
+        // Instatiate object next frame
+        pendingActions.Enqueue(() =>
+        {
+            // At to Dictionary of my (client) NetworkTransforms
+            GameObject go = Instantiate(networkPrefabMap[type], position, Quaternion.identity);
+            NetworkTransform networkTransform = go.GetComponent<NetworkTransform>();
+            networkTransform.ID = entityID;
+            networkTransforms.Add(entityID, (type, networkTransform));
+        });
+    }
+
+    private void HandleSetNetworkTransform(Message message)
+    {
+        // Set position and rotation of NetworkTransform with given ID
+        Guid id = message.ReadGuid();
+        Vector3 position = message.ReadVector3();
+        try
+        {
+            NetworkTransform networkTransform = networkTransforms[id].Item2; //TODO: Named tuple?
+            pendingActions.Enqueue(() =>
+            {
+                networkTransform.SetPosition(position);
+            });
+        }
+        catch (Exception)
+        {
+            //TODO: Should be fixed once initial players are sent on join
+            Debug.Log("ID not found");
+        }
+    }
+
+    //TODO: Could instead chunk together movement updates so they don't have to be specific packets
+    private void HandleUpdateNetworkTransform(Message message)
+    {
+        // Broadcast movement update to clients
+        //TODO: Create BroadcastMessage(Message m)
+        //TODO: Maybe create a method to easily copy values in underlying byte-array
+        Message broadcastMessage = new Message(MessageType.SetNetworkTransform);
+        broadcastMessage.WriteGuid(message.ReadGuid());
+        broadcastMessage.WriteVector3(message.ReadVector3());
+
+        foreach (ISpace clientSpace in clientSpaces.Values)
+        {
+            clientSpace.Put(broadcastMessage.ToTuple());
+        }
+    }
+
+    public void SendMovementUpdate(Guid id, Vector3 position)
+    {
+        Message message = new Message(MessageType.UpdateNetworkTransform);
+        message.WriteGuid(id);
+        message.WriteVector3(position);
+
+        serverSpace.Put(message.ToTuple());
     }
 }
