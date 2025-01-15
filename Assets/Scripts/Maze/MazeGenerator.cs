@@ -84,7 +84,7 @@ public class MazeGenerator : MonoBehaviour{
                 if (placeWalls){
                     (int xPos, int yPos) = (wallLength*wallX, wallLength*wallY);
                     Quaternion angle = (orientation == HORIZONTAL) ? Quaternion.identity : Quaternion.Euler(0,90,0);
-                    Instantiate(wallPrefab, new(i + xPos, 0, j - yPos), angle);
+                    Instantiate(wallPrefab, new(i + xPos, 0, j - yPos), angle, transform);
                 }
             }
             wallX += dx;
@@ -106,19 +106,19 @@ public class MazeGenerator : MonoBehaviour{
     }
 
     private void PlaceBorder(int width, int height){
-        Instantiate(groundPrefab, new(0, 0, 0), Quaternion.identity).transform.localScale = new Vector3((width*wallLength)/10.0f, 1, (height*wallLength)/10.0f);
+        Instantiate(groundPrefab, new(0, 0, 0), Quaternion.identity, transform).transform.localScale = new Vector3((width*wallLength)/10.0f, 1, (height*wallLength)/10.0f);
         // Origo
         (int i, int j) = (-hW + hWL, hH - hWL);
 
         // Place top and bottom walls
         for(int xPos = i; xPos < i + wallLength*width; xPos += wallLength){
-            Instantiate(wallPrefab, new(xPos, 0, -hH), Quaternion.identity);
-            Instantiate(wallPrefab, new(xPos, 0, hH), Quaternion.identity);
+            Instantiate(wallPrefab, new(xPos, 0, -hH), Quaternion.identity,transform);
+            Instantiate(wallPrefab, new(xPos, 0, hH), Quaternion.identity,transform);
         }
         // Place left and right walls
         for(int yPos = j; yPos > j - wallLength*height; yPos -= wallLength){
-            Instantiate(wallPrefab, new(-hW, 0, yPos), Quaternion.Euler(0,90,0));
-            Instantiate(wallPrefab, new(hW, 0, yPos), Quaternion.Euler(0,90,0));
+            Instantiate(wallPrefab, new(-hW, 0, yPos), Quaternion.Euler(0,90,0),transform);
+            Instantiate(wallPrefab, new(hW, 0, yPos), Quaternion.Euler(0,90,0),transform);
         }
     }
 
@@ -150,18 +150,27 @@ public class MazeGenerator : MonoBehaviour{
         for (int y = 0; y < height; y++){
             for (int x = 0; x < width; x++){
                 if ((maze[x,y] & S) == S){
-                    Instantiate(wallPrefab, new(iHori + wallLength*x, 0, jHori - wallLength*y), Quaternion.identity);
+                    Instantiate(wallPrefab, new(iHori + wallLength*x, 0, jHori - wallLength*y), Quaternion.identity,transform);
                 }
                 if ((maze[x,y] & E) == E){
-                    Instantiate(wallPrefab, new(iVert + wallLength*x, 0, jVert - wallLength*y), Quaternion.Euler(0,90,0));
+                    Instantiate(wallPrefab, new(iVert + wallLength*x, 0, jVert - wallLength*y), Quaternion.Euler(0,90,0),transform);
                 }
             }
+        }
+    }
+
+    public void clearMaze(){
+        foreach(Transform child in transform){
+            Destroy(child.gameObject);
         }
     }
 
     private void Update(){
         if (Input.GetKeyDown(KeyCode.L)){
             GenerateMaze(maze,3,10);
+        }
+        if (Input.GetKeyDown(KeyCode.K)){
+            clearMaze();
         }
     }
 }
