@@ -1,6 +1,8 @@
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
+using System.Collections;
 
 public class PlayerShooting : MonoBehaviour
 {
@@ -18,18 +20,29 @@ public class PlayerShooting : MonoBehaviour
     void Update()
     {
 
+        PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
+
         if (timer > 0)
         {
             timer -= Time.deltaTime / fireRate;
         }
 
-        if (shootAction.action.triggered && timer <= 0)
+        if (shootAction.action.triggered)
         {
-            var bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
-            bullet.GetComponent<Rigidbody>().linearVelocity = bulletSpawnPoint.forward * bulletSpeed;
+            switch (true)
+            {
+                case bool _ when powerUp.hasLaser:
+                    Laser();
+                    break;
 
-            timer = 1;
+                case bool _ when powerUp.hasMini:
+                    Mini();
+                    break;
 
+                default:
+                    Shoot();
+                    break;
+            }
         }
 
         // if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out RaycastHit hitInfo, 20f))
@@ -43,12 +56,23 @@ public class PlayerShooting : MonoBehaviour
         // }
     }
 
-    /* void Shoot()
+    void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, bulletSpawnTransform.position, Quaternion.identity);
-        bullet.GetComponent<Rigidbody>().AddForce(bulletSpawnTransform.forward * bulletSpeed, ForceMode.Impulse);
+        var bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
+        bullet.GetComponent<Rigidbody>().linearVelocity = bulletSpawnPoint.forward * bulletSpeed;
 
         timer = 1;
+    }
 
-    } */
+    void Laser()
+    {
+        Debug.Log("Laser");
+        timer = 1;
+    }
+
+    void Mini()
+    {
+        Debug.Log("Mini");
+        timer = 1;
+    }
 }
