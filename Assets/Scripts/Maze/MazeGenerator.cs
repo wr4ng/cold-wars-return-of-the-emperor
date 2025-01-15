@@ -23,7 +23,7 @@ public class MazeGenerator : MonoBehaviour{
         // Random.InitState(seed);
     }
 
-    public void setSeed(int seed){
+    public void SetSeed(int seed){
         Random.InitState(seed);
     }
 
