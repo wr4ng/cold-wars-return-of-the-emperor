@@ -453,6 +453,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f5f0c5a29f12eb43bb27d37307a7d98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  wallPrefab: {fileID: 1529341205509513415, guid: e2449d61bd01f4a4fb57077b3cae8a03, type: 3}
+  groundPrefab: {fileID: 150117877343597971, guid: 817799a142cc3cd468d7ca4c63473dc7, type: 3}
 --- !u!4 &619798417
 Transform:
   m_ObjectHideFlags: 0
@@ -481,6 +483,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   wallPrefab: {fileID: 1529341205509513415, guid: e2449d61bd01f4a4fb57077b3cae8a03, type: 3}
+  wallLength: 4
+  wallWidth: 1
+  groundWidth: 0
+  groundHeight: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

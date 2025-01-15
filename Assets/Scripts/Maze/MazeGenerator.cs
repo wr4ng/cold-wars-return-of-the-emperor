@@ -22,6 +22,10 @@ public class MazeGenerator : MonoBehaviour{
         Random.InitState(seed);
     }
 
+    public MazeGenerator(int seed){
+        Random.InitState(seed);
+    }
+
     public void PrintMaze(int[,] maze){
         int width = maze.GetLength(0);
         int height = maze.GetLength(1);
