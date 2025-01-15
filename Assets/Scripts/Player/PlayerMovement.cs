@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public static GameObject PlayerModel;
 
     public Rigidbody rb;
     public InputActionReference movementAction;
@@ -52,12 +53,7 @@ public class PlayerMovement : MonoBehaviour
             Debug.Log("More");
             SetPenguinRotation(0);
         }
-        else if (input.y < 0)
-        {
-            Debug.Log("Less");
-            SetPenguinRotation(-180);
-        }
-        else if (input.y == 0)
+        else
         {
             Debug.Log("Zero");
             SetPenguinRotation(-90);
