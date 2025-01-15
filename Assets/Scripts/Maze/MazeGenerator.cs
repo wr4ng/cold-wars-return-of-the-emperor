@@ -159,7 +159,7 @@ public class MazeGenerator : MonoBehaviour{
         }
     }
 
-    public void clearMaze(){
+    public void ClearMaze(){
         foreach(Transform child in transform){
             Destroy(child.gameObject);
         }
@@ -170,7 +170,7 @@ public class MazeGenerator : MonoBehaviour{
             GenerateMaze(maze,3,10);
         }
         if (Input.GetKeyDown(KeyCode.K)){
-            clearMaze();
+            ClearMaze();
         }
     }
 }
