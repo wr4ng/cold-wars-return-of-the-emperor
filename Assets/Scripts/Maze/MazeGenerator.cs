@@ -110,7 +110,7 @@ public class MazeGenerator : MonoBehaviour{
         Divide(maze, newX, newY, newWidth, newHeight, DetermineOrientation(newWidth, newHeight), placeWalls);
     }
 
-    private void placeBorder(int width, int height){
+    private void PlaceBorder(int width, int height){
         Instantiate(groundPrefab, new(0, 0, 0), Quaternion.identity).transform.localScale = new Vector3((width*wallLength)/10.0f, 1, (height*wallLength)/10.0f);
         // Origo
         (int i, int j) = (-hW + hWL, hH - hWL);
@@ -137,16 +137,16 @@ public class MazeGenerator : MonoBehaviour{
         hW = width * wallLength/2;
         hH = height * wallLength/2;
 
-        placeBorder(width,height);
+        PlaceBorder(width,height);
         Divide(maze, 0, 0, width, height, HORIZONTAL, true);
         // PrintMaze(maze);
         // placeMaze(maze);
     }
 
-    public void placeMaze(int[,] maze){
+    public void PlaceMaze(int[,] maze){
         int width = maze.GetLength(0);
         int height = maze.GetLength(1);
-        placeBorder(width, height);
+        PlaceBorder(width, height);
 
         // Offset
         (int iHori, int jHori) = (-hW + hWL, hH - wallLength);
