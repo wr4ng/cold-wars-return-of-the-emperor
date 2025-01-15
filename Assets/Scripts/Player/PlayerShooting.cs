@@ -27,7 +27,7 @@ public class PlayerShooting : MonoBehaviour
             timer -= Time.deltaTime / fireRate;
         }
 
-        if (shootAction.action.triggered)
+        if (shootAction.action.triggered && timer <= 0)
         {
             switch (true)
             {

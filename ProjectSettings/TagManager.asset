@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Wall
   - PowerLaser
+  - PowerMini
   layers:
   - Default
   - TransparentFX
