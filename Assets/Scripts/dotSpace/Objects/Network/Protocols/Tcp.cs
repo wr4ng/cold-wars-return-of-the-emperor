@@ -57,8 +57,8 @@ namespace dotSpace.Objects.Network.Protocols
             catch (Exception e)
             {
                 this.client.Close();
+                throw e;
             }
-            return null;
         }
 
         /// <summary>
@@ -74,6 +74,7 @@ namespace dotSpace.Objects.Network.Protocols
             catch (Exception e)
             {
                 this.client.Close();
+                throw e;
             }
         }
 
