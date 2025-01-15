@@ -1,4 +1,3 @@
-using System.Threading;
 using UnityEngine;
 
 public class MazeGenerator : MonoBehaviour{
@@ -10,6 +9,7 @@ public class MazeGenerator : MonoBehaviour{
     
     public GameObject wallPrefab;
     public GameObject groundPrefab;
+    public GameObject cam;
 
     // variables used when finding offset
     private int hW; // halfWidth
@@ -131,6 +131,8 @@ public class MazeGenerator : MonoBehaviour{
         maze = new int[width, height];
         hW = width * wallLength/2;
         hH = height * wallLength/2;
+        Vector3 pos = new(0,CalculateCamHeight(height),0);
+        Instantiate(cam, pos,Quaternion.Euler(90,0,0), transform);
 
         PlaceBorder(width,height);
         Divide(maze, 0, 0, width, height, HORIZONTAL, true);
@@ -163,6 +165,10 @@ public class MazeGenerator : MonoBehaviour{
         foreach(Transform child in transform){
             Destroy(child.gameObject);
         }
+    }
+
+    public float CalculateCamHeight(int height){
+        return 3.4759f * height + 1.9151f;
     }
 
     private void Update(){
