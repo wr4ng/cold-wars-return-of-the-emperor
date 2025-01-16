@@ -18,8 +18,6 @@ public class NetworkManager : MonoBehaviour
     private string connectionString;
     private ISpace serverSpace;
     private Dictionary<Guid, ISpace> clientSpaces;
-    private string host;
-    private int port;
 
     private Guid myId;
     private ISpace mySpace;
@@ -60,11 +58,14 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
+    private void OnApplicationQuit()
+    {
+        Close();
+    }
+
     public void StartServer(string host, int port)
     {
         //TODO Create type with method to create connectionString and gateString
-        this.host = host;
-        this.port = port;
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
 
         // Setup server repository
