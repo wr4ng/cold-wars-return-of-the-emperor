@@ -5,7 +5,7 @@ public class Laser : MonoBehaviour
 
     [SerializeField] private LineRenderer lineRenderer;
     private int numOfReflections = 5;
-    public float range = 50f;
+    public float range = 20f;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -62,16 +62,16 @@ public class Laser : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.gameObject.CompareTag("Wall"))
-        {
-            CastRay(transform.position, transform.forward);
-        }
+    // private void OnTriggerEnter(Collider other)
+    // {
+    //     if (other.gameObject.CompareTag("Wall"))
+    //     {
+    //         CastRay(transform.position, transform.forward);
+    //     }
 
-        if (other.gameObject.CompareTag("Player"))
-        {
-            Destroy(other.gameObject);
-        }
-    }
+    //     if (other.gameObject.CompareTag("Player"))
+    //     {
+    //         Destroy(other.gameObject);
+    //     }
+    // }
 }

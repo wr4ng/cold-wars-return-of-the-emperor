@@ -13,6 +13,7 @@ public class PlayerShooting : MonoBehaviour
     public float bulletSpeed = 10f;
     public float fireRate = 0.5f;
     private float timer;
+    public Laser laserscript;
 
 
     [SerializeField]
@@ -29,10 +30,16 @@ public class PlayerShooting : MonoBehaviour
             timer -= Time.deltaTime / fireRate;
         }
 
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            Debug.Log("Test123");
+            Laser();
+        }
+
         if (shootAction.action.triggered && timer <= 0)
         {
 
-            Laser();
+            Shoot();
             // switch (true)
             // {
             //     case bool _ when powerUp.hasLaser:
@@ -50,6 +57,7 @@ public class PlayerShooting : MonoBehaviour
         }
 
 
+
     }
 
     void Shoot()
@@ -62,7 +70,8 @@ public class PlayerShooting : MonoBehaviour
 
     void Laser()
     {
-
+        laserscript.enabled = true;
+        Debug.Log("Testher");
     }
 
     void Mini()
