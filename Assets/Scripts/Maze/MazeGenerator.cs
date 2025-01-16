@@ -15,10 +15,12 @@ public class MazeGenerator : MonoBehaviour{
     private int hH; // halfHeight
     private int hWL = wallLength/2; // halfWallLength
 
+    private System.Random rng = new();
+
     int[,] maze;
 
     public void SetSeed(int seed){
-        Random.InitState(seed);
+        rng = new System.Random(seed);
     }
 
     public void PrintMaze(int[,] maze){
@@ -58,12 +60,12 @@ public class MazeGenerator : MonoBehaviour{
 
         bool hori = orientation == HORIZONTAL;
         // Wall position
-        int wallX = x + (hori ? 0 : Random.Range(0,width - 2));
-        int wallY = y + (hori ? Random.Range(0,height - 2) : 0);
+        int wallX = x + (hori ? 0 : rng.Next(0,width - 2));
+        int wallY = y + (hori ? rng.Next(0,height - 2) : 0);
 
         // Passage position
-        int passX = wallX + (hori ? Random.Range(0,width) : 0);
-        int passY = wallY + (hori ? 0 : Random.Range(0,height));
+        int passX = wallX + (hori ? rng.Next(0,width) : 0);
+        int passY = wallY + (hori ? 0 : rng.Next(0,height));
 
         // wall direction
         int dx = hori ? 1 : 0;
@@ -125,8 +127,8 @@ public class MazeGenerator : MonoBehaviour{
     // If so comment out the maze variable at the top and call.
     public void GenerateMaze(int[,] maze, int lowerBound, int upperBound){
         // Init maze Variables
-        int width = Random.Range(lowerBound, upperBound);
-        int height = Random.Range(lowerBound, upperBound);
+        int width = rng.Next(lowerBound, upperBound);
+        int height = rng.Next(lowerBound, upperBound);
         maze = new int[width, height];
         hW = width * wallLength/2;
         hH = height * wallLength/2;
