@@ -5,7 +5,7 @@ public class characterCreation : MonoBehaviour
 {
     private List<GameObject> models;
     private int selectionIndex = 0;
-
+    public static string selectedCharacterName;
     private void Start()
     {
         models = new List<GameObject>();
@@ -39,5 +39,8 @@ public class characterCreation : MonoBehaviour
         models[selectionIndex].SetActive(false);
         selectionIndex = index;
         models[selectionIndex].SetActive(true);
+
+        selectedCharacterName = models[selectionIndex].name;
+        Debug.Log(selectedCharacterName);
     }
 }
