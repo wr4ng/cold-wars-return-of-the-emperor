@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
@@ -9,6 +8,8 @@ using dotSpace.Objects.Network;
 using dotSpace.Objects.Space;
 
 using UnityEngine;
+using System.Linq;
+using UnityEngine.InputSystem;
 
 public class NetworkManager : MonoBehaviour
 {
@@ -29,6 +30,9 @@ public class NetworkManager : MonoBehaviour
     private Thread clientThread;
 
     private int initialSeed;
+
+    [SerializeField]
+    private GameObject bulletPrefab;
 
     // NetworkTransform management
     [Header("Network Prefabs")]
@@ -205,6 +209,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.UpdateNetworkTransform:
                         HandleUpdateNetworkTransform(message);
                         break;
+                    case MessageType.SpawnBullet:
+                        HandleSpawnBulletServer(message);
+                        break;
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
                         break;
@@ -234,6 +241,9 @@ public class NetworkManager : MonoBehaviour
                         break;
                     case MessageType.MazeInfo:
                         HandleMazeInfo(message);
+                        break;
+                    case MessageType.SpawnBullet:
+                        HandleSpawnBulletClient(message);
                         break;
                     default:
                         Debug.LogError("unknown MessageType: " + message.Type);
@@ -375,12 +385,49 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
+    private void HandleSpawnBulletServer(Message message)
+    {
+        Guid shooterID = message.ReadGuid();
+        Vector3 bulletPositon = message.ReadVector3();
+        Quaternion bulletQuarternion = message.ReadQuarternion();
+
+        Message spawnBullet = new Message(MessageType.SpawnBullet);
+        spawnBullet.WriteVector3(bulletPositon);
+        spawnBullet.WriteQuarternion(bulletQuarternion);
+
+        //foreach ((_, ISpace s) in clientSpaces.Where(kvp => kvp.Key != shooterID))
+        foreach ((_, ISpace s) in clientSpaces)
+        {
+            s.Put(spawnBullet.ToTuple());
+        }
+    }
+
+    private void HandleSpawnBulletClient(Message message)
+    {
+        Vector3 bulletPositon = message.ReadVector3();
+        Quaternion bulletQuarternion = message.ReadQuarternion();
+
+        pendingActions.Enqueue(() => {
+            Instantiate(bulletPrefab, bulletPositon, bulletQuarternion);
+        });
+    }
+
     public void SendMovementUpdate(Guid id, Vector3 position, Quaternion rotation)
     {
         Message message = new Message(MessageType.UpdateNetworkTransform);
         message.WriteGuid(id);
         message.WriteVector3(position);
         message.WriteQuarternion(rotation);
+
+        serverSpace.Put(message.ToTuple());
+    }
+
+    public void SendSpawnBullet(Vector3 bulletPosition, Quaternion bulletRotation)
+    {
+        Message message = new Message(MessageType.SpawnBullet);
+        message.WriteGuid(myId);
+        message.WriteVector3(bulletPosition);
+        message.WriteQuarternion(bulletRotation);
 
         serverSpace.Put(message.ToTuple());
     }

@@ -11,6 +11,7 @@ public enum MessageType
     InstatiateNetworkTransform,
     UpdateNetworkTransform,
     SetNetworkTransform,
+    SpawnBullet,
 }
 
 //TODO: Remove and use EnumHelper.MustParse()
