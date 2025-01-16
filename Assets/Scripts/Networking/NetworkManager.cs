@@ -168,30 +168,6 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (!IsRunning) { return; }
-
-        //TODO: Debugging setup
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            try
-            {
-                Message m = new Message(MessageType.Hello);
-                m.WriteInt(1234);
-                m.WriteInt(-42);
-                m.WriteString("yeet");
-
-                serverSpace.Put(m.ToTuple());
-                Debug.Log("[client] sent hello to server");
-            }
-            catch (SocketException e)
-            {
-                Debug.Log("[client] failed to send timestamp: " + e.ToString());
-            }
-        }
-    }
-
     private void FixedUpdate()
     {
         if (IsRunning)
@@ -219,14 +195,10 @@ public class NetworkManager : MonoBehaviour
             foreach (ITuple t in tuples)
             {
                 Message message = Message.FromTuple(t);
-                Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
                 {
-                    case MessageType.Hello:
-                        HandleHello(message);
-                        break;
                     case MessageType.JoinRequest:
                         HandleJoin();
                         break;
@@ -246,12 +218,10 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("[client] client listen thread started...");
         while (IsRunning)
         {
-            //TODO: Hello isn't handled with the new system...
             IEnumerable<ITuple> tuples = mySpace.GetAll(Message.MessagePattern);
             foreach (ITuple tuple in tuples)
             {
                 Message message = Message.FromTuple(tuple);
-                Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
@@ -266,7 +236,7 @@ public class NetworkManager : MonoBehaviour
                         HandleMazeInfo(message);
                         break;
                     default:
-                        Debug.Log("unknown MessageType: " + message.Type);
+                        Debug.LogError("unknown MessageType: " + message.Type);
                         break;
                 }
 
@@ -335,17 +305,6 @@ public class NetworkManager : MonoBehaviour
         Message mazeInfo = new Message(MessageType.MazeInfo);
         mazeInfo.WriteInt(initialSeed);
         clientSpace.Put(mazeInfo.ToTuple());
-    }
-
-    //TODO: Remove once unused
-    private void HandleHello(Message data)
-    {
-
-        Debug.Log("[hello] " + data.ReadInt() + ", " + data.ReadInt() + ", " + data.ReadString());
-        foreach (ISpace clientSpace in clientSpaces.Values)
-        {
-            clientSpace.Put("someone said hello!");
-        }
     }
 
     private void HandleInstantiateNetworkTransform(Message message)
