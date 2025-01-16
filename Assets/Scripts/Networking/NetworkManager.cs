@@ -81,17 +81,17 @@ public class NetworkManager : MonoBehaviour
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
 
-        // Create local player for host
-        Guid myPlayerID = Guid.NewGuid();
-        GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], Vector3.zero, Quaternion.identity);
-        NetworkTransform myNetworkTransform = myPlayer.GetComponent<NetworkTransform>();
-        myNetworkTransform.ID = myPlayerID;
-        networkTransforms.Add(myPlayerID, (EntityType.LocalPlayer, myNetworkTransform));
-
-        // Setup maze info
+        // Setup Maze
         initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         MazeGenerator.Instance.SetSeed(initialSeed);
         MazeGenerator.Instance.GenerateMaze();
+
+        // Create local player for host
+        Guid myPlayerID = Guid.NewGuid();
+        GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], MazeGenerator.Instance.GetRandomSpawnPoint(), Quaternion.identity);
+        NetworkTransform myNetworkTransform = myPlayer.GetComponent<NetworkTransform>();
+        myNetworkTransform.ID = myPlayerID;
+        networkTransforms.Add(myPlayerID, (EntityType.LocalPlayer, myNetworkTransform));
 
         // Start server thread
         serverThread = new Thread(() => RunServerListen());
@@ -287,8 +287,10 @@ public class NetworkManager : MonoBehaviour
         newClientMessage.WriteString(EntityType.LocalPlayer.ToString());
         otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
 
-        newClientMessage.WriteVector3(Vector3.zero);
-        otherClientsMessage.WriteVector3(Vector3.zero);
+        Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
+
+        newClientMessage.WriteVector3(newPosition);
+        otherClientsMessage.WriteVector3(newPosition);
 
         clientSpace.Put(newClientMessage.ToTuple());
 
