@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class MazeGenerator : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class MazeGenerator : MonoBehaviour
 
     public GameObject wallPrefab;
     public GameObject groundPrefab;
+    public GameObject test;
 
     // variables used when finding offset
     private int hW; // halfWidth
@@ -21,6 +23,7 @@ public class MazeGenerator : MonoBehaviour
     private System.Random rng = new();
 
     int[,] maze;
+    (int,int)[] spawnPoints;
 
     private void Awake()
     {
@@ -166,6 +169,17 @@ public class MazeGenerator : MonoBehaviour
         PlaceBorder(width, height);
         Divide(maze, 0, 0, width, height, HORIZONTAL, true);
 
+        // Calculate spawn Points
+        spawnPoints = new (int,int)[width*height];
+        (int x0, int y0) = (-hW+2,-hH+2);
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                spawnPoints[x*height+y] = (x0+x* wallLength,y0+y*wallLength);
+            }
+        }
+
         // Set camera position
         float heightUnits = wallLength * height / 2 + 0.5f;
         float widthUnits = wallLength * width / 2 + 0.5f;
@@ -207,6 +221,12 @@ public class MazeGenerator : MonoBehaviour
         }
     }
 
+    public void TestSpawnPoints(){
+            (int x, int y) = spawnPoints[rng.Next(0,spawnPoints.Length)];
+            Instantiate(test, new Vector3(x,0,y), Quaternion.identity, transform);
+
+    }
+
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.L))
@@ -216,6 +236,10 @@ public class MazeGenerator : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.K))
         {
             ClearMaze();
+        }
+        if (Input.GetKeyDown(KeyCode.J))
+        {
+            TestSpawnPoints();
         }
     }
 }
