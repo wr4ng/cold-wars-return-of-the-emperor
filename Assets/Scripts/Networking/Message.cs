@@ -165,4 +165,17 @@ public class Message
         else
             throw new ArgumentException($"'{value}' is not a valid {typeof(T).Name}");
     }
+
+    public void WriteQuarternion(Quaternion value)
+    {
+        WriteFloat(value.x);
+        WriteFloat(value.y);
+        WriteFloat(value.z);
+        WriteFloat(value.w);
+    }
+
+    public Quaternion ReadQuarternion()
+    {
+        return new Quaternion(ReadFloat(), ReadFloat(), ReadFloat(), ReadFloat());
+    }
 }

@@ -332,12 +332,13 @@ public class NetworkManager : MonoBehaviour
         // Set position and rotation of NetworkTransform with given ID
         Guid id = message.ReadGuid();
         Vector3 position = message.ReadVector3();
+        Quaternion rotation = message.ReadQuarternion();
         try
         {
             NetworkTransform networkTransform = networkTransforms[id].Item2; //TODO: Named tuple?
             pendingActions.Enqueue(() =>
             {
-                networkTransform.SetPosition(position);
+                networkTransform.SetPositionAndRotation(position, rotation);
             });
         }
         catch (Exception)
@@ -356,6 +357,7 @@ public class NetworkManager : MonoBehaviour
         Message broadcastMessage = new Message(MessageType.SetNetworkTransform);
         broadcastMessage.WriteGuid(message.ReadGuid());
         broadcastMessage.WriteVector3(message.ReadVector3());
+        broadcastMessage.WriteQuarternion(message.ReadQuarternion());
 
         foreach (ISpace clientSpace in clientSpaces.Values)
         {
@@ -373,11 +375,12 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
-    public void SendMovementUpdate(Guid id, Vector3 position)
+    public void SendMovementUpdate(Guid id, Vector3 position, Quaternion rotation)
     {
         Message message = new Message(MessageType.UpdateNetworkTransform);
         message.WriteGuid(id);
         message.WriteVector3(position);
+        message.WriteQuarternion(rotation);
 
         serverSpace.Put(message.ToTuple());
     }
