@@ -206,7 +206,15 @@ namespace dotSpace.Objects.Network
         {
             switch (this.connectionString.Protocol)
             {
-                case Protocol.TCP: return new Tcp(new TcpClient(this.connectionString.Host, this.connectionString.Port));
+                case Protocol.TCP:
+                    //TODO: Clean this up
+                    TcpClient tcpClient = new TcpClient();
+                    bool success = tcpClient.ConnectAsync(this.connectionString.Host, this.connectionString.Port).Wait(1000);
+                    if (!success)
+                    {
+                        throw new Exception("connection timeout");
+                    }
+                    return new Tcp(tcpClient);
                 case Protocol.UDP: return new Udp(this.connectionString.Host, this.connectionString.Port);
                 default: return null;
             }

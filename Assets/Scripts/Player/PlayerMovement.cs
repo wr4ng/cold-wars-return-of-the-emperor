@@ -2,14 +2,17 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
-
     public Rigidbody rb;
+    public InputActionReference movementAction;
 
-    public float forwardForce = 2000f;
+    public float forwardForce = 250f;
+    public float backwardForce = -250f;
     public float rotationSpeed = 100f;
+    public float deadZoneThreshold = 0.2f; // Define a dead zone threshold
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -20,24 +23,35 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        Vector2 input = movementAction.action.ReadValue<Vector2>();
         Vector3 velocity = Vector3.zero;
 
-        if (Input.GetKey("w"))
+        // Apply dead zone threshold for forward/backward movement
+        if (Mathf.Abs(input.y) > deadZoneThreshold)
         {
-            velocity = transform.forward * forwardForce * Time.deltaTime;
+            if (input.y > 0)
+            {
+                velocity = transform.forward * forwardForce * Time.deltaTime;
+            }
+            else if (input.y < 0)
+            {
+                velocity = transform.forward * backwardForce * Time.deltaTime;
+            }
         }
 
         rb.linearVelocity = velocity;
 
-        if (Input.GetKey("q"))
+        // Apply dead zone threshold for rotation
+        if (Mathf.Abs(input.x) > deadZoneThreshold)
         {
-            transform.Rotate(0, -rotationSpeed * Time.deltaTime, 0);
+            if (input.x < 0)
+            {
+                transform.Rotate(0, -rotationSpeed * Time.deltaTime, 0);
+            }
+            else if (input.x > 0)
+            {
+                transform.Rotate(0, rotationSpeed * Time.deltaTime, 0);
+            }
         }
-
-        if (Input.GetKey("e"))
-        {
-            transform.Rotate(0, rotationSpeed * Time.deltaTime, 0);
-        }
-
     }
 }

@@ -84,9 +84,11 @@ namespace dotSpace.Objects.Network.Gates
                     new Thread(() => { this.callBack(mode); }).Start();
                 }
             }
+            catch (SocketException) { }
             catch (Exception e)
             {
-                // TODO: Error handling: throw e;
+                // TODO: Error handling
+                throw e;
             }
             finally
             {
