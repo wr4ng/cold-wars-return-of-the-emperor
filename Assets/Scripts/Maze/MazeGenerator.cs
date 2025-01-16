@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class MazeGenerator : MonoBehaviour
 {
+    public static MazeGenerator Instance;
+
     public const int HORIZONTAL = 1;
     private const int VERTICAL = 2;
     public const int S = 1;
@@ -10,6 +12,7 @@ public class MazeGenerator : MonoBehaviour
 
     public GameObject wallPrefab;
     public GameObject groundPrefab;
+    public GameObject test;
 
     // variables used when finding offset
     private int hW; // halfWidth
@@ -19,6 +22,19 @@ public class MazeGenerator : MonoBehaviour
     private System.Random rng = new();
 
     int[,] maze;
+    (int, int)[] spawnPoints;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Debug.LogError("Multiple MazeGenerators!");
+        }
+    }
 
     public void SetSeed(int seed)
     {
@@ -139,7 +155,7 @@ public class MazeGenerator : MonoBehaviour
 
     // The maze input is unnecessary, its only there if the caller wants a copy of the array. 
     // If so comment out the maze variable at the top and call.
-    public void GenerateMaze(int[,] maze, int lowerBound = 3, int upperBound = 10)
+    public void GenerateMaze(int lowerBound = 3, int upperBound = 10)
     {
         // Init maze Variables
         int width = rng.Next(lowerBound, upperBound);
@@ -151,6 +167,17 @@ public class MazeGenerator : MonoBehaviour
         // Generate maze
         PlaceBorder(width, height);
         Divide(maze, 0, 0, width, height, HORIZONTAL, true);
+
+        // Calculate spawn Points
+        spawnPoints = new (int, int)[width * height];
+        (int x0, int y0) = (-hW + 2, -hH + 2);
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                spawnPoints[x * height + y] = (x0 + x * wallLength, y0 + y * wallLength);
+            }
+        }
 
         // Set camera position
         float heightUnits = wallLength * height / 2 + 0.5f;
@@ -193,11 +220,17 @@ public class MazeGenerator : MonoBehaviour
         }
     }
 
+    public Vector3 GetRandomSpawnPoint()
+    {
+        (int x, int y) = spawnPoints[rng.Next(0, spawnPoints.Length)];
+        return new(x, 1, y);
+    }
+
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.L))
         {
-            GenerateMaze(maze);
+            GenerateMaze();
         }
         if (Input.GetKeyDown(KeyCode.K))
         {

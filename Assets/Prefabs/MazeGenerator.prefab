@@ -46,3 +46,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   wallPrefab: {fileID: 1529341205509513415, guid: e2449d61bd01f4a4fb57077b3cae8a03, type: 3}
   groundPrefab: {fileID: 150117877343597971, guid: 817799a142cc3cd468d7ca4c63473dc7, type: 3}
+  test: {fileID: 188136935589729501, guid: 5105347e30684acd8af2c847505ced9d, type: 3}

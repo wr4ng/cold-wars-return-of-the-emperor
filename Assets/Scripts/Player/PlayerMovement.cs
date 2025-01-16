@@ -23,6 +23,9 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        // Reset angular velocity to stop spinning
+        rb.angularVelocity = Vector3.zero;
+
         Vector2 input = movementAction.action.ReadValue<Vector2>();
         Vector3 velocity = Vector3.zero;
 

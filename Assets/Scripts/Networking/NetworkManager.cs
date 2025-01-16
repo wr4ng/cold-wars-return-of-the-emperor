@@ -18,8 +18,6 @@ public class NetworkManager : MonoBehaviour
     private string connectionString;
     private ISpace serverSpace;
     private Dictionary<Guid, ISpace> clientSpaces;
-    private string host;
-    private int port;
 
     private Guid myId;
     private ISpace mySpace;
@@ -29,6 +27,8 @@ public class NetworkManager : MonoBehaviour
 
     private Thread serverThread;
     private Thread clientThread;
+
+    private int initialSeed;
 
     // NetworkTransform management
     [Header("Network Prefabs")]
@@ -58,11 +58,14 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
+    private void OnApplicationQuit()
+    {
+        Close();
+    }
+
     public void StartServer(string host, int port)
     {
         //TODO Create type with method to create connectionString and gateString
-        this.host = host;
-        this.port = port;
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
 
         // Setup server repository
@@ -77,9 +80,15 @@ public class NetworkManager : MonoBehaviour
         myId = Guid.NewGuid();
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
+
+        // Setup Maze
+        initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        MazeGenerator.Instance.SetSeed(initialSeed);
+        MazeGenerator.Instance.GenerateMaze();
+
         // Create local player for host
         Guid myPlayerID = Guid.NewGuid();
-        GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], Vector3.zero, Quaternion.identity);
+        GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], MazeGenerator.Instance.GetRandomSpawnPoint(), Quaternion.identity);
         NetworkTransform myNetworkTransform = myPlayer.GetComponent<NetworkTransform>();
         myNetworkTransform.ID = myPlayerID;
         networkTransforms.Add(myPlayerID, (EntityType.LocalPlayer, myNetworkTransform));
@@ -159,30 +168,6 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (!IsRunning) { return; }
-
-        //TODO: Debugging setup
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            try
-            {
-                Message m = new Message(MessageType.Hello);
-                m.WriteInt(1234);
-                m.WriteInt(-42);
-                m.WriteString("yeet");
-
-                serverSpace.Put(m.ToTuple());
-                Debug.Log("[client] sent hello to server");
-            }
-            catch (SocketException e)
-            {
-                Debug.Log("[client] failed to send timestamp: " + e.ToString());
-            }
-        }
-    }
-
     private void FixedUpdate()
     {
         if (IsRunning)
@@ -210,14 +195,10 @@ public class NetworkManager : MonoBehaviour
             foreach (ITuple t in tuples)
             {
                 Message message = Message.FromTuple(t);
-                Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
                 {
-                    case MessageType.Hello:
-                        HandleHello(message);
-                        break;
                     case MessageType.JoinRequest:
                         HandleJoin();
                         break;
@@ -237,12 +218,10 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("[client] client listen thread started...");
         while (IsRunning)
         {
-            //TODO: Hello isn't handled with the new system...
             IEnumerable<ITuple> tuples = mySpace.GetAll(Message.MessagePattern);
             foreach (ITuple tuple in tuples)
             {
                 Message message = Message.FromTuple(tuple);
-                Debug.Log(message.Type);
 
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
@@ -253,8 +232,11 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.SetNetworkTransform:
                         HandleSetNetworkTransform(message);
                         break;
+                    case MessageType.MazeInfo:
+                        HandleMazeInfo(message);
+                        break;
                     default:
-                        Debug.Log("unknown MessageType: " + message.Type);
+                        Debug.LogError("unknown MessageType: " + message.Type);
                         break;
                 }
 
@@ -305,8 +287,10 @@ public class NetworkManager : MonoBehaviour
         newClientMessage.WriteString(EntityType.LocalPlayer.ToString());
         otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
 
-        newClientMessage.WriteVector3(Vector3.zero);
-        otherClientsMessage.WriteVector3(Vector3.zero);
+        Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
+
+        newClientMessage.WriteVector3(newPosition);
+        otherClientsMessage.WriteVector3(newPosition);
 
         clientSpace.Put(newClientMessage.ToTuple());
 
@@ -318,17 +302,11 @@ public class NetworkManager : MonoBehaviour
                 space.Put(otherClientsMessage.ToTuple());
             }
         }
-    }
 
-    //TODO: Remove once unused
-    private void HandleHello(Message data)
-    {
-
-        Debug.Log("[hello] " + data.ReadInt() + ", " + data.ReadInt() + ", " + data.ReadString());
-        foreach (ISpace clientSpace in clientSpaces.Values)
-        {
-            clientSpace.Put("someone said hello!");
-        }
+        // Send MazeInfo
+        Message mazeInfo = new Message(MessageType.MazeInfo);
+        mazeInfo.WriteInt(initialSeed);
+        clientSpace.Put(mazeInfo.ToTuple());
     }
 
     private void HandleInstantiateNetworkTransform(Message message)
@@ -354,12 +332,13 @@ public class NetworkManager : MonoBehaviour
         // Set position and rotation of NetworkTransform with given ID
         Guid id = message.ReadGuid();
         Vector3 position = message.ReadVector3();
+        Quaternion rotation = message.ReadQuarternion();
         try
         {
             NetworkTransform networkTransform = networkTransforms[id].Item2; //TODO: Named tuple?
             pendingActions.Enqueue(() =>
             {
-                networkTransform.SetPosition(position);
+                networkTransform.SetPositionAndRotation(position, rotation);
             });
         }
         catch (Exception)
@@ -378,6 +357,7 @@ public class NetworkManager : MonoBehaviour
         Message broadcastMessage = new Message(MessageType.SetNetworkTransform);
         broadcastMessage.WriteGuid(message.ReadGuid());
         broadcastMessage.WriteVector3(message.ReadVector3());
+        broadcastMessage.WriteQuarternion(message.ReadQuarternion());
 
         foreach (ISpace clientSpace in clientSpaces.Values)
         {
@@ -385,11 +365,22 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    public void SendMovementUpdate(Guid id, Vector3 position)
+    private void HandleMazeInfo(Message message)
+    {
+        int seed = message.ReadInt();
+        pendingActions.Enqueue(() =>
+        {
+            MazeGenerator.Instance.SetSeed(seed);
+            MazeGenerator.Instance.GenerateMaze();
+        });
+    }
+
+    public void SendMovementUpdate(Guid id, Vector3 position, Quaternion rotation)
     {
         Message message = new Message(MessageType.UpdateNetworkTransform);
         message.WriteGuid(id);
         message.WriteVector3(position);
+        message.WriteQuarternion(rotation);
 
         serverSpace.Put(message.ToTuple());
     }

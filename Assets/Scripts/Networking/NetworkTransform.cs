@@ -24,13 +24,13 @@ public class NetworkTransform : MonoBehaviour
         }
         if (timer >= 1 / updateRate)
         {
-            NetworkManager.Instance.SendMovementUpdate(ID, transform.position);
+            NetworkManager.Instance.SendMovementUpdate(ID, transform.position, transform.rotation);
             timer = 0;
         }
         timer += Time.deltaTime;
     }
 
-    public void SetPosition(Vector3 position)
+    public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
     {
         //TODO: Handle reconciliation when IsOwner and positions don't match
         if (IsOwner)
@@ -38,6 +38,7 @@ public class NetworkTransform : MonoBehaviour
             return;
         }
         transform.position = position;
+        transform.rotation = rotation;
     }
 
     public Vector3 GetPosition() => lastPosition;

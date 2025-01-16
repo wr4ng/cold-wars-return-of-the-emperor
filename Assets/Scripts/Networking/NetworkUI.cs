@@ -27,8 +27,15 @@ public class NetworkUI : MonoBehaviour
 
     public void Quit()
     {
+        // Close network connection
         NetworkManager.Instance.Close();
-        connectUI.SetActive(true);
+
+        // Close Unity (or stop the editor from playing)
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     private void Update()
