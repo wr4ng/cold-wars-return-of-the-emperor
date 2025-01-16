@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using System.Collections;
+using UnityEngine.Rendering;
 
 public class PlayerShooting : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class PlayerShooting : MonoBehaviour
     public float bulletSpeed = 10f;
     public float fireRate = 0.5f;
     private float timer;
+
 
     [SerializeField]
     private InputActionReference shootAction;
@@ -29,31 +31,25 @@ public class PlayerShooting : MonoBehaviour
 
         if (shootAction.action.triggered && timer <= 0)
         {
-            switch (true)
-            {
-                case bool _ when powerUp.hasLaser:
-                    Laser();
-                    break;
 
-                case bool _ when powerUp.hasMini:
-                    Mini();
-                    break;
+            Laser();
+            // switch (true)
+            // {
+            //     case bool _ when powerUp.hasLaser:
+            //         Laser();
+            //         break;
 
-                default:
-                    Shoot();
-                    break;
-            }
+            //     case bool _ when powerUp.hasMini:
+            //         Mini();
+            //         break;
+
+            //     default:
+            //         Shoot();
+            //         break;
+            // }
         }
 
-        // if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out RaycastHit hitInfo, 20f))
-        // {
-        //     Debug.Log("Blaster hit!");
-        //     Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * hitInfo.distance, Color.green);
-        // }
-        // else
-        // {
-        //     Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 20f, Color.red);
-        // }
+
     }
 
     void Shoot()
@@ -66,8 +62,7 @@ public class PlayerShooting : MonoBehaviour
 
     void Laser()
     {
-        Debug.Log("Laser");
-        timer = 1;
+
     }
 
     void Mini()
