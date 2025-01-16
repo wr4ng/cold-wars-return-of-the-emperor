@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class MazeGenerator : MonoBehaviour
 {
+    public static MazeGenerator Instance;
+
     public const int HORIZONTAL = 1;
     private const int VERTICAL = 2;
     public const int S = 1;
@@ -19,6 +21,18 @@ public class MazeGenerator : MonoBehaviour
     private System.Random rng = new();
 
     int[,] maze;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Debug.LogError("Multiple MazeGenerators!");
+        }
+    }
 
     public void SetSeed(int seed)
     {
@@ -139,7 +153,7 @@ public class MazeGenerator : MonoBehaviour
 
     // The maze input is unnecessary, its only there if the caller wants a copy of the array. 
     // If so comment out the maze variable at the top and call.
-    public void GenerateMaze(int[,] maze, int lowerBound = 3, int upperBound = 10)
+    public void GenerateMaze(int lowerBound = 3, int upperBound = 10)
     {
         // Init maze Variables
         int width = rng.Next(lowerBound, upperBound);
@@ -197,7 +211,7 @@ public class MazeGenerator : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.L))
         {
-            GenerateMaze(maze);
+            GenerateMaze();
         }
         if (Input.GetKeyDown(KeyCode.K))
         {

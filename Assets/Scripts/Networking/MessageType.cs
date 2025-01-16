@@ -8,6 +8,7 @@ public enum MessageType
     Hello, //TODO: Remove once unused
     JoinRequest,
     JoinResponse,
+    MazeInfo,
     InstatiateNetworkTransform,
     UpdateNetworkTransform,
     SetNetworkTransform,

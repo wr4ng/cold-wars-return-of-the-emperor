@@ -30,6 +30,8 @@ public class NetworkManager : MonoBehaviour
     private Thread serverThread;
     private Thread clientThread;
 
+    private int initialSeed;
+
     // NetworkTransform management
     [Header("Network Prefabs")]
     [SerializeField]
@@ -77,12 +79,18 @@ public class NetworkManager : MonoBehaviour
         myId = Guid.NewGuid();
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
+
         // Create local player for host
         Guid myPlayerID = Guid.NewGuid();
         GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], Vector3.zero, Quaternion.identity);
         NetworkTransform myNetworkTransform = myPlayer.GetComponent<NetworkTransform>();
         myNetworkTransform.ID = myPlayerID;
         networkTransforms.Add(myPlayerID, (EntityType.LocalPlayer, myNetworkTransform));
+
+        // Setup maze info
+        initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        MazeGenerator.Instance.SetSeed(initialSeed);
+        MazeGenerator.Instance.GenerateMaze();
 
         // Start server thread
         serverThread = new Thread(() => RunServerListen());
@@ -253,6 +261,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.SetNetworkTransform:
                         HandleSetNetworkTransform(message);
                         break;
+                    case MessageType.MazeInfo:
+                        HandleMazeInfo(message);
+                        break;
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
                         break;
@@ -318,6 +329,11 @@ public class NetworkManager : MonoBehaviour
                 space.Put(otherClientsMessage.ToTuple());
             }
         }
+
+        // Send MazeInfo
+        Message mazeInfo = new Message(MessageType.MazeInfo);
+        mazeInfo.WriteInt(initialSeed);
+        clientSpace.Put(mazeInfo.ToTuple());
     }
 
     //TODO: Remove once unused
@@ -383,6 +399,16 @@ public class NetworkManager : MonoBehaviour
         {
             clientSpace.Put(broadcastMessage.ToTuple());
         }
+    }
+
+    private void HandleMazeInfo(Message message)
+    {
+        int seed = message.ReadInt();
+        pendingActions.Enqueue(() =>
+        {
+            MazeGenerator.Instance.SetSeed(seed);
+            MazeGenerator.Instance.GenerateMaze();
+        });
     }
 
     public void SendMovementUpdate(Guid id, Vector3 position)
