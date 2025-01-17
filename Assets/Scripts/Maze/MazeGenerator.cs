@@ -12,7 +12,7 @@ public class MazeGenerator : MonoBehaviour
 
     public GameObject wallPrefab;
     public GameObject groundPrefab;
-    public GameObject test;
+    public GameObject pillar;
 
     // variables used when finding offset
     private int hW; // halfWidth
@@ -150,6 +150,11 @@ public class MazeGenerator : MonoBehaviour
         {
             Instantiate(wallPrefab, new(-hW, 0, yPos), Quaternion.Euler(0, 90, 0), transform);
             Instantiate(wallPrefab, new(hW, 0, yPos), Quaternion.Euler(0, 90, 0), transform);
+        }
+        for (int x = 0; x < width +1; x++){
+            for(int y = 0; y < height +1; y++){
+                Instantiate(pillar, new(-hW + wallLength * x,0,-hH+ wallLength * y), Quaternion.identity);
+            }
         }
     }
 
