@@ -149,6 +149,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Type: 0
   IsOwner: 1
+  SyncPosition: 1
   updateRate: 30
 --- !u!54 &2557808518532438234
 Rigidbody:

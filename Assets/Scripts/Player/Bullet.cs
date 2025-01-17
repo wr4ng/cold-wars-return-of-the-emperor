@@ -7,17 +7,20 @@ public class Bullet : MonoBehaviour
 
     [SerializeField]
     private Rigidbody rb;
+    [SerializeField]
+    private NetworkTransform nt;
 
     void Awake()
     {
         Destroy(gameObject, lifetime);
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        float moveDistance = speed * Time.deltaTime;
+        float moveDistance = speed * Time.fixedDeltaTime;
         // Cast ray forward to check if we hit something on the way. If we do, move forward and reflect at point
-        if (Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo, moveDistance))
+        bool hit = Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo, moveDistance);
+        if (hit && !hitInfo.collider.gameObject.CompareTag("Player"))
         {
             // Calculate how far the bullet wanted to move through the object, and apply move after reflection
             float extraMoveDistance = moveDistance - hitInfo.distance;
@@ -40,13 +43,14 @@ public class Bullet : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            Destroy(gameObject);
             if (NetworkManager.Instance.IsServer)
             {
+                Destroy(gameObject);
                 Destroy(collision.gameObject);
                 NetworkTransform networkTransform = collision.gameObject.GetComponent<NetworkTransform>();
                 if (networkTransform == null) { return; }
                 NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
+                NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
             }
         }
     }
@@ -54,12 +58,13 @@ public class Bullet : MonoBehaviour
     // RemotePlayer has a trigger collider, so destroy bullet on hit
     private void OnTriggerEnter(Collider collider)
     {
-        Destroy(gameObject);
         if (NetworkManager.Instance.IsServer)
         {
+            Destroy(gameObject);
             Destroy(collider.gameObject);
             NetworkTransform networkTransform = collider.gameObject.GetComponent<NetworkTransform>();
             NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
+            NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
         }
     }
 

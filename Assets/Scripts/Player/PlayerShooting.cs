@@ -21,9 +21,6 @@ public class PlayerShooting : MonoBehaviour
         }
         if (shootAction.action.triggered && timer <= 0)
         {
-            // Create bullet locally
-            Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
-
             // Send request to shoot to server
             NetworkManager.Instance.SendSpawnBullet(bulletSpawnPoint.position, bulletSpawnPoint.rotation);
 
