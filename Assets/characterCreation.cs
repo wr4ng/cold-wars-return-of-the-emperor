@@ -35,12 +35,10 @@ public class characterCreation : MonoBehaviour
         {
             return;
         }
-
         models[selectionIndex].SetActive(false);
         selectionIndex = index;
         models[selectionIndex].SetActive(true);
 
         selectedCharacterName = models[selectionIndex].name;
-        Debug.Log(selectedCharacterName);
     }
 }

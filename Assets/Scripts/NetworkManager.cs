@@ -40,6 +40,11 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("Server started with connection string: " + connectionString);
     }
 
+    private void Start()
+    {
+        Debug.Log(characterCreation.selectedCharacterName);
+    }
+
     public static void StartClient(string host, int port)
     {
         connectionString = string.Format("tcp://{0}:{1}/server?KEEP", host, port);

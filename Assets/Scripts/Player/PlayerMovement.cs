@@ -50,13 +50,11 @@ public class PlayerMovement : MonoBehaviour
 
         if (input.y > 0)
         {
-            Debug.Log("More");
-            SetPenguinRotation(0);
+            SetPenguinRotation(90);
         }
         else
         {
-            Debug.Log("Zero");
-            SetPenguinRotation(-90);
+            SetPenguinRotation(0);
         }
     }
 
