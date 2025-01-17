@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3278892839248338985}
   - component: {fileID: 1382978296294896392}
   - component: {fileID: 3690221171535859307}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Bullet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -150,4 +150,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lifeTime: 2
-  rb: {fileID: 1382978296294896392}
