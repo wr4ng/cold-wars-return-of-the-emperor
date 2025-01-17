@@ -19,42 +19,43 @@ public class PlayerShooting : MonoBehaviour
     [SerializeField]
     private InputActionReference shootAction;
 
+    private PlayerPowerStats powerUp;
+
+    void Start()
+    {
+        powerUp = GetComponent<PlayerPowerStats>();
+    }
+
     // Update is called once per frame
     void Update()
     {
-
-        PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
         if (timer > 0)
         {
             timer -= Time.deltaTime / fireRate;
         }
 
-        /*  if (powerUp.hasLaser || Input.GetKeyDown(KeyCode.L))
-         {
-             Laser();
-         } */
-
-        if (shootAction.action.triggered && timer <= 0)
+        if (Input.GetKeyDown(KeyCode.L) || laserscript.enabled)
         {
-
-            switch (true)
-            {
-                case bool _ when powerUp.hasLaser:
-                    Laser();
-                    break;
-
-                case bool _ when powerUp.hasMini:
-                    Mini();
-                    break;
-
-                default:
-                    Shoot();
-                    break;
-            }
+            Laser();
         }
+        else if (shootAction.action.triggered && timer <= 0)
+        {
+            Shoot();
+            // switch (true)
+            // {
+            //     case bool _ when powerUp.hasLaser:
+            //         Laser();
+            //         break;
 
+            //     case bool _ when powerUp.hasMini:
+            //         Mini();
+            //         break;
 
-
+            //     default:
+            //         Shoot();
+            //         break;
+            // }
+        }
     }
 
     void Shoot()
@@ -67,13 +68,11 @@ public class PlayerShooting : MonoBehaviour
 
     void Laser()
     {
-        Debug.Log("Laser");
-        timer = 1;
-        /* PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
+        // timer = 1;
         powerUp.hasLaser = true;
         laserscript.enabled = true;
-        laserscript.EnableLineRenderer(); */
-
+        laserscript.EnableLineRenderer();
+        Debug.Log("Laser");
     }
 
     void Mini()

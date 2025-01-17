@@ -8,10 +8,13 @@ public class Laser : MonoBehaviour
     private int numOfReflections = 5;
     public float range = 20f;
 
+    private PlayerPowerStats powerUp;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         lineRenderer.positionCount = numOfReflections + 1;
+        powerUp = GetComponent<PlayerPowerStats>();
     }
 
     public void EnableLineRenderer()
@@ -19,10 +22,24 @@ public class Laser : MonoBehaviour
         lineRenderer.enabled = true;
     }
 
+    public void DisableLineRenderer()
+    {
+        if (lineRenderer != null) { lineRenderer.enabled = false; lineRenderer.positionCount = 0; Debug.Log("Line renderer disabled."); }
+
+    }
+
     // Update is called once per frame
     void Update()
     {
+        //if (!enabled || !lineRenderer.enabled)
+        //{
+        //    return;
+        //}
         CastRay(transform.position, transform.forward);
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            DisableLaser();
+        }
     }
 
     private void CastRay(Vector3 laserPos, Vector3 laserDir)
@@ -40,7 +57,6 @@ public class Laser : MonoBehaviour
             {
                 if (laserHit.collider.CompareTag("Wall"))
                 {
-                    shootLaser(laserHit);
                     currentLaserIndex++;
                     lineRenderer.positionCount = currentLaserIndex + 1;
                     lineRenderer.SetPosition(currentLaserIndex, laserHit.point);
@@ -49,15 +65,14 @@ public class Laser : MonoBehaviour
                 }
                 else if (laserHit.collider.CompareTag("Player"))
                 {
-                    shootLaser(laserHit);
+                    if (Input.GetKeyDown(KeyCode.F))
+                    {
+                        Destroy(laserHit.collider.gameObject);
+                    }
                     currentLaserIndex++;
                     lineRenderer.positionCount = currentLaserIndex + 1;
                     lineRenderer.SetPosition(currentLaserIndex, laserPos + laserDir * range);
                     break;
-                }
-                else
-                {
-                    shootLaser(laserHit);
                 }
             }
             else
@@ -70,33 +85,11 @@ public class Laser : MonoBehaviour
         }
     }
 
-    public void shootLaser(RaycastHit laserHit)
+    private void DisableLaser()
     {
-        PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
-        if (Input.GetKeyDown(KeyCode.F) && laserHit.collider.CompareTag("Player"))
-        {
-            Destroy(laserHit.collider.gameObject);
-            powerUp.hasLaser = false;
-            Debug.Log("Destroyed player");
-        }
-        else if (Input.GetKeyDown(KeyCode.F))
-        {
-            powerUp.hasLaser = false;
-            Debug.Log("Lost Laser");
-
-        }
+        powerUp.hasLaser = false;
+        DisableLineRenderer();
+        enabled = false;
+        Debug.Log("Laser and line renderer disabled.");
     }
-
-    // private void OnTriggerEnter(Collider other)
-    // {
-    //     if (other.gameObject.CompareTag("Wall"))
-    //     {
-    //         CastRay(transform.position, transform.forward);
-    //     }
-
-    //     if (other.gameObject.CompareTag("Player"))
-    //     {
-    //         Destroy(other.gameObject);
-    //     }
-    // }
 }
