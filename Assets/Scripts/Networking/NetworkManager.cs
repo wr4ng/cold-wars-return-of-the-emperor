@@ -1,6 +1,6 @@
 using System;
+using System.Linq;
 using System.Threading;
-using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
@@ -13,6 +13,9 @@ using UnityEngine;
 public class NetworkManager : MonoBehaviour
 {
     public static NetworkManager Instance;
+
+    private string host;
+    private int port;
 
     private SpaceRepository repository;
     private string connectionString;
@@ -29,6 +32,9 @@ public class NetworkManager : MonoBehaviour
     private Thread clientThread;
 
     private int initialSeed;
+
+    [SerializeField]
+    private GameObject bulletPrefab;
 
     // NetworkTransform management
     [Header("Network Prefabs")]
@@ -65,6 +71,9 @@ public class NetworkManager : MonoBehaviour
 
     public void StartServer(string host, int port)
     {
+        this.host = host;
+        this.port = port;
+
         //TODO Create type with method to create connectionString and gateString
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
 
@@ -149,13 +158,13 @@ public class NetworkManager : MonoBehaviour
             if (IsServer)
             {
                 Debug.Log("Closing server...");
-                repository.CloseGate(connectionString);
+                // Close all gates
+                repository.Dispose();
                 if (serverThread.IsAlive)
                 {
                     serverThread.Abort();
                     serverThread.Join();
                 }
-                repository.CloseGate(connectionString);
                 Debug.Log("Server closed");
             }
             Debug.Log("Closing client...");
@@ -205,6 +214,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.UpdateNetworkTransform:
                         HandleUpdateNetworkTransform(message);
                         break;
+                    case MessageType.SpawnBullet:
+                        HandleSpawnBulletServer(message);
+                        break;
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
                         break;
@@ -232,8 +244,14 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.SetNetworkTransform:
                         HandleSetNetworkTransform(message);
                         break;
+                    case MessageType.DestroyNetworkTransform:
+                        HandleDestroyNetworkTransform(message);
+                        break;
                     case MessageType.MazeInfo:
                         HandleMazeInfo(message);
+                        break;
+                    case MessageType.SpawnBullet:
+                        HandleSpawnBulletClient(message);
                         break;
                     default:
                         Debug.LogError("unknown MessageType: " + message.Type);
@@ -333,18 +351,38 @@ public class NetworkManager : MonoBehaviour
         Guid id = message.ReadGuid();
         Vector3 position = message.ReadVector3();
         Quaternion rotation = message.ReadQuarternion();
-        try
+
+        pendingActions.Enqueue(() =>
         {
-            NetworkTransform networkTransform = networkTransforms[id].Item2; //TODO: Named tuple?
+            if (networkTransforms.TryGetValue(id, out var value))
+            {
+                (_, NetworkTransform networkTransform) = value;
+                networkTransform.SetPositionAndRotation(position, rotation);
+            }
+            else
+            {
+                Debug.Log("ID of NetworkTransform not found");
+            }
+        });
+    }
+
+    private void HandleDestroyNetworkTransform(Message message)
+    {
+        Guid id = message.ReadGuid();
+
+        bool found = networkTransforms.TryGetValue(id, out var value);
+        if (found)
+        {
+            (_, NetworkTransform networkTransform) = value;
+            networkTransforms.Remove(id);
             pendingActions.Enqueue(() =>
             {
-                networkTransform.SetPositionAndRotation(position, rotation);
+                Destroy(networkTransform.gameObject);
             });
         }
-        catch (Exception)
+        else
         {
-            //TODO: Should be fixed once initial players are sent on join
-            Debug.Log("ID not found");
+            Debug.LogError($"Trying to destroy NetworkTransform with invalid id: {id}");
         }
     }
 
@@ -375,6 +413,33 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
+    private void HandleSpawnBulletServer(Message message)
+    {
+        Guid shooterID = message.ReadGuid();
+        Vector3 bulletPositon = message.ReadVector3();
+        Quaternion bulletQuarternion = message.ReadQuarternion();
+
+        Message spawnBullet = new Message(MessageType.SpawnBullet);
+        spawnBullet.WriteVector3(bulletPositon);
+        spawnBullet.WriteQuarternion(bulletQuarternion);
+
+        foreach ((_, ISpace s) in clientSpaces.Where(kvp => kvp.Key != shooterID))
+        {
+            s.Put(spawnBullet.ToTuple());
+        }
+    }
+
+    private void HandleSpawnBulletClient(Message message)
+    {
+        Vector3 bulletPositon = message.ReadVector3();
+        Quaternion bulletQuarternion = message.ReadQuarternion();
+
+        pendingActions.Enqueue(() =>
+        {
+            Instantiate(bulletPrefab, bulletPositon, bulletQuarternion);
+        });
+    }
+
     public void SendMovementUpdate(Guid id, Vector3 position, Quaternion rotation)
     {
         Message message = new Message(MessageType.UpdateNetworkTransform);
@@ -383,5 +448,32 @@ public class NetworkManager : MonoBehaviour
         message.WriteQuarternion(rotation);
 
         serverSpace.Put(message.ToTuple());
+    }
+
+    public void SendSpawnBullet(Vector3 bulletPosition, Quaternion bulletRotation)
+    {
+        Message message = new Message(MessageType.SpawnBullet);
+        message.WriteGuid(myId);
+        message.WriteVector3(bulletPosition);
+        message.WriteQuarternion(bulletRotation);
+
+        serverSpace.Put(message.ToTuple());
+    }
+
+    public void SendDestroyNetworkTransform(Guid networkTransformID)
+    {
+        networkTransforms.Remove(networkTransformID);
+        Message m = new(MessageType.DestroyNetworkTransform);
+        m.WriteGuid(networkTransformID);
+        BroadcastMessage(m, excludeID: myId);
+    }
+
+    private void BroadcastMessage(Message message, Guid? excludeID = null)
+    {
+        IEnumerable<ISpace> receivers = clientSpaces.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value);
+        foreach (ISpace clientSpace in receivers)
+        {
+            clientSpace.Put(message.ToTuple());
+        }
     }
 }

@@ -10,7 +10,9 @@ public enum MessageType
     MazeInfo,
     InstatiateNetworkTransform,
     UpdateNetworkTransform,
+    DestroyNetworkTransform,
     SetNetworkTransform,
+    SpawnBullet,
 }
 
 //TODO: Remove and use EnumHelper.MustParse()
