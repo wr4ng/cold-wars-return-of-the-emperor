@@ -15,8 +15,8 @@ public class MazeGenerator : MonoBehaviour
     public GameObject pillar;
 
     // variables used when finding offset
-    private int hW; // halfWidth
-    private int hH; // halfHeight
+    private int hW; // halfWidth of ground
+    private int hH; // halfHeight of ground
     private int hWL = wallLength / 2; // halfWallLength
 
     private System.Random rng = new();
@@ -67,15 +67,15 @@ public class MazeGenerator : MonoBehaviour
         Debug.Log(mazeString);
     }
 
-    // Used to determine wall direction in new chamber, this also causes long corridors
+    // Used to determine wall direction in new chamber
     private static int DetermineOrientation(int w, int h)
     {
         if (w < h) return HORIZONTAL;
         return VERTICAL;
     }
 
-    // placeWalls input is to determine if we use seperate function to place the maze - can be removed when we figure it out.
-    private void Divide(int[,] maze, int x, int y, int width, int height, int orientation, bool placeWalls = false)
+    // Recursive Maze function
+    private void Divide(int[,] maze, int x, int y, int width, int height, int orientation)
     {
         // return if corridor is one wide
         if (width <= 1 || height <= 1) return;
@@ -108,12 +108,9 @@ public class MazeGenerator : MonoBehaviour
                 maze[wallX, wallY] |= direction; // Adds to array which isnt used except to print maze in console
 
                 // Place wall
-                if (placeWalls)
-                {
                     (int xPos, int yPos) = (wallLength * wallX, wallLength * wallY);
                     Quaternion angle = (orientation == HORIZONTAL) ? Quaternion.identity : Quaternion.Euler(0, 90, 0);
                     Instantiate(wallPrefab, new(i + xPos, 0, j - yPos), angle, transform);
-                }
             }
             wallX += dx;
             wallY += dy;
@@ -125,12 +122,12 @@ public class MazeGenerator : MonoBehaviour
         (int newX, int newY) = (x, y);
         // Dimensions of new chamber
         (int newWidth, int newHeight) = hori ? (width, wallY - y + 1) : (wallX - x + 1, height);
-        Divide(maze, newX, newY, newWidth, newHeight, DetermineOrientation(newWidth, newHeight), placeWalls);
+        Divide(maze, newX, newY, newWidth, newHeight, DetermineOrientation(newWidth, newHeight));
 
         // Other chamber
         (newX, newY) = hori ? (x, wallY + 1) : (wallX + 1, y);
         (newWidth, newHeight) = hori ? (width, y + height - wallY - 1) : (x + width - wallX - 1, height);
-        Divide(maze, newX, newY, newWidth, newHeight, DetermineOrientation(newWidth, newHeight), placeWalls);
+        Divide(maze, newX, newY, newWidth, newHeight, DetermineOrientation(newWidth, newHeight));
     }
 
     private void PlaceBorder(int width, int height)
@@ -151,9 +148,12 @@ public class MazeGenerator : MonoBehaviour
             Instantiate(wallPrefab, new(-hW, 0, yPos), Quaternion.Euler(0, 90, 0), transform);
             Instantiate(wallPrefab, new(hW, 0, yPos), Quaternion.Euler(0, 90, 0), transform);
         }
-        for (int x = 0; x < width +1; x++){
-            for(int y = 0; y < height +1; y++){
-                Instantiate(pillar, new(-hW + wallLength * x,0,-hH+ wallLength * y), Quaternion.identity);
+        // Places pillars
+        for (int x = 0; x < width + 1; x++)
+        {
+            for (int y = 0; y < height + 1; y++)
+            {
+                Instantiate(pillar, new(-hW + wallLength * x, 0, -hH + wallLength * y), Quaternion.identity);
             }
         }
     }
@@ -171,7 +171,7 @@ public class MazeGenerator : MonoBehaviour
 
         // Generate maze
         PlaceBorder(width, height);
-        Divide(maze, 0, 0, width, height, HORIZONTAL, true);
+        Divide(maze, 0, 0, width, height, HORIZONTAL);
 
         // Calculate spawn Points
         spawnPoints = new (int, int)[width * height];
