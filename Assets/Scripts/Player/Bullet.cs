@@ -24,19 +24,18 @@ public class Bullet : MonoBehaviour
         if (collision.gameObject.CompareTag("Player"))
         {
             //Destroy(other.gameObject);
-            //Destroy(gameObject);
-        }
-        //TODO: Maybe use layers?
-        if (collision.gameObject.CompareTag("Wall"))
-        {
-            Debug.Log("hit wall");
+            Destroy(gameObject);
         }
 
         transform.forward = Vector3.Reflect(transform.forward, collision.contacts[0].normal);
-        Vector3 newPosition = transform.position + (transform.forward * speed * Time.deltaTime);
+        // Also move a bit forward to avoid re-colliding
+        Vector3 newPosition = transform.position + (speed * Time.deltaTime * transform.forward);
         rb.MovePosition(newPosition);
+    }
 
-        // Also move a bit forward
-        Debug.Log(collision.gameObject);
+    // RemotePlayer has a trigger collider, so destroy bullet on hit
+    private void OnTriggerEnter(Collider other)
+    {
+        Destroy(gameObject);
     }
 }

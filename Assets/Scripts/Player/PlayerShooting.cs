@@ -21,9 +21,8 @@ public class PlayerShooting : MonoBehaviour
         }
         if (shootAction.action.triggered && timer <= 0)
         {
-            //TODO: Create bullet locally
-            //var bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
-            //bullet.GetComponent<Rigidbody>().linearVelocity = bulletSpawnPoint.forward * bulletSpeed;
+            // Create bullet locally
+            Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
 
             // Send request to shoot to server
             NetworkManager.Instance.SendSpawnBullet(bulletSpawnPoint.position, bulletSpawnPoint.rotation);

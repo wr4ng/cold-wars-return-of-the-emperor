@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -393,8 +394,7 @@ public class NetworkManager : MonoBehaviour
         spawnBullet.WriteVector3(bulletPositon);
         spawnBullet.WriteQuarternion(bulletQuarternion);
 
-        //foreach ((_, ISpace s) in clientSpaces.Where(kvp => kvp.Key != shooterID))
-        foreach ((_, ISpace s) in clientSpaces)
+        foreach ((_, ISpace s) in clientSpaces.Where(kvp => kvp.Key != shooterID))
         {
             s.Put(spawnBullet.ToTuple());
         }
