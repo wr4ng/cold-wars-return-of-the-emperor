@@ -217,6 +217,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.SpawnBullet:
                         HandleSpawnBulletServer(message);
                         break;
+                    case MessageType.SpawnPowerUp:
+                        HandleSpawnPowerUp(message);
+                        break;
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
                         break;
@@ -252,6 +255,9 @@ public class NetworkManager : MonoBehaviour
                         break;
                     case MessageType.SpawnBullet:
                         HandleSpawnBulletClient(message);
+                        break;
+                    case MessageType.SpawnPowerUp:
+                        HandleSpawnPowerUp(message);
                         break;
                     default:
                         Debug.LogError("unknown MessageType: " + message.Type);
@@ -474,6 +480,41 @@ public class NetworkManager : MonoBehaviour
         foreach (ISpace clientSpace in receivers)
         {
             clientSpace.Put(message.ToTuple());
+        }
+    }
+
+    private void SpawnPowerUp()
+    {
+        // MessageType.Insta
+        Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
+        Debug.Log("Sending powerup pickup to" + newPosition);
+
+        // Send position of power up
+        Message m = new(MessageType.SpawnPowerUp);
+        m.WriteVector3(newPosition);
+
+        foreach (ISpace clientSpace in clientSpaces.Values)
+        {
+            clientSpace.Put(m.ToTuple());
+        }
+
+    }
+
+    private void HandleSpawnPowerUp(Message message)
+    {
+        Vector3 position = message.ReadVector3();
+        Debug.Log("Powerup pickup received at" + position);
+        /* pendingActions.Enqueue(() =>
+        {
+            Instantiate(networkPrefabMap[EntityType.PowerUp], position, Quaternion.identity);
+        }); */
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            SpawnPowerUp();
         }
     }
 }

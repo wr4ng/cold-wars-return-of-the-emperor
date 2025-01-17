@@ -13,6 +13,7 @@ public enum MessageType
     DestroyNetworkTransform,
     SetNetworkTransform,
     SpawnBullet,
+    SpawnPowerUp,
 }
 
 //TODO: Remove and use EnumHelper.MustParse()
