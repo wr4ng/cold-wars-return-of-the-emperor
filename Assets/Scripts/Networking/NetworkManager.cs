@@ -14,6 +14,9 @@ public class NetworkManager : MonoBehaviour
 {
     public static NetworkManager Instance;
 
+    private string host;
+    private int port;
+
     private SpaceRepository repository;
     private string connectionString;
     private ISpace serverSpace;
@@ -68,6 +71,9 @@ public class NetworkManager : MonoBehaviour
 
     public void StartServer(string host, int port)
     {
+        this.host = host;
+        this.port = port;
+
         //TODO Create type with method to create connectionString and gateString
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
 
@@ -152,13 +158,13 @@ public class NetworkManager : MonoBehaviour
             if (IsServer)
             {
                 Debug.Log("Closing server...");
-                repository.CloseGate(connectionString);
+                // Close all gates
+                repository.Dispose();
                 if (serverThread.IsAlive)
                 {
                     serverThread.Abort();
                     serverThread.Join();
                 }
-                repository.CloseGate(connectionString);
                 Debug.Log("Server closed");
             }
             Debug.Log("Closing client...");
@@ -237,6 +243,9 @@ public class NetworkManager : MonoBehaviour
                         break;
                     case MessageType.SetNetworkTransform:
                         HandleSetNetworkTransform(message);
+                        break;
+                    case MessageType.DestroyNetworkTransform:
+                        HandleDestroyNetworkTransform(message);
                         break;
                     case MessageType.MazeInfo:
                         HandleMazeInfo(message);
@@ -342,18 +351,38 @@ public class NetworkManager : MonoBehaviour
         Guid id = message.ReadGuid();
         Vector3 position = message.ReadVector3();
         Quaternion rotation = message.ReadQuarternion();
-        try
+
+        pendingActions.Enqueue(() =>
         {
-            NetworkTransform networkTransform = networkTransforms[id].Item2; //TODO: Named tuple?
+            if (networkTransforms.TryGetValue(id, out var value))
+            {
+                (_, NetworkTransform networkTransform) = value;
+                networkTransform.SetPositionAndRotation(position, rotation);
+            }
+            else
+            {
+                Debug.Log("ID of NetworkTransform not found");
+            }
+        });
+    }
+
+    private void HandleDestroyNetworkTransform(Message message)
+    {
+        Guid id = message.ReadGuid();
+
+        bool found = networkTransforms.TryGetValue(id, out var value);
+        if (found)
+        {
+            (_, NetworkTransform networkTransform) = value;
+            networkTransforms.Remove(id);
             pendingActions.Enqueue(() =>
             {
-                networkTransform.SetPositionAndRotation(position, rotation);
+                Destroy(networkTransform.gameObject);
             });
         }
-        catch (Exception)
+        else
         {
-            //TODO: Should be fixed once initial players are sent on join
-            Debug.Log("ID not found");
+            Debug.LogError($"Trying to destroy NetworkTransform with invalid id: {id}");
         }
     }
 
@@ -405,7 +434,8 @@ public class NetworkManager : MonoBehaviour
         Vector3 bulletPositon = message.ReadVector3();
         Quaternion bulletQuarternion = message.ReadQuarternion();
 
-        pendingActions.Enqueue(() => {
+        pendingActions.Enqueue(() =>
+        {
             Instantiate(bulletPrefab, bulletPositon, bulletQuarternion);
         });
     }
@@ -428,5 +458,22 @@ public class NetworkManager : MonoBehaviour
         message.WriteQuarternion(bulletRotation);
 
         serverSpace.Put(message.ToTuple());
+    }
+
+    public void SendDestroyNetworkTransform(Guid networkTransformID)
+    {
+        networkTransforms.Remove(networkTransformID);
+        Message m = new(MessageType.DestroyNetworkTransform);
+        m.WriteGuid(networkTransformID);
+        BroadcastMessage(m, excludeID: myId);
+    }
+
+    private void BroadcastMessage(Message message, Guid? excludeID = null)
+    {
+        IEnumerable<ISpace> receivers = clientSpaces.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value);
+        foreach (ISpace clientSpace in receivers)
+        {
+            clientSpace.Put(message.ToTuple());
+        }
     }
 }

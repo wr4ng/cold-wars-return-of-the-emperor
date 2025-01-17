@@ -23,8 +23,14 @@ public class Bullet : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            //Destroy(other.gameObject);
             Destroy(gameObject);
+            if (NetworkManager.Instance.IsServer)
+            {
+                Destroy(collision.gameObject);
+                NetworkTransform networkTransform = collision.gameObject.GetComponent<NetworkTransform>();
+                if (networkTransform == null) { return; }
+                NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
+            }
         }
 
         transform.forward = Vector3.Reflect(transform.forward, collision.contacts[0].normal);
@@ -37,5 +43,11 @@ public class Bullet : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Destroy(gameObject);
+        if (NetworkManager.Instance.IsServer)
+        {
+            Destroy(other.gameObject);
+            NetworkTransform networkTransform = other.gameObject.GetComponent<NetworkTransform>();
+            NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
+        }
     }
 }

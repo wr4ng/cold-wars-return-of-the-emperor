@@ -10,6 +10,7 @@ public enum MessageType
     MazeInfo,
     InstatiateNetworkTransform,
     UpdateNetworkTransform,
+    DestroyNetworkTransform,
     SetNetworkTransform,
     SpawnBullet,
 }
