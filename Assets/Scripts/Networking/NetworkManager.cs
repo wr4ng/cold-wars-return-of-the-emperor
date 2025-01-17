@@ -8,8 +8,6 @@ using dotSpace.Objects.Network;
 using dotSpace.Objects.Space;
 
 using UnityEngine;
-using System.Linq;
-using UnityEngine.InputSystem;
 
 public class NetworkManager : MonoBehaviour
 {
