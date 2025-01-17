@@ -119,11 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &127017640 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7467161062113125934, guid: 02a036907429ece44a3f67715b964c14, type: 3}
-  m_PrefabInstance: {fileID: 1615990131093764660}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -510,28 +505,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &914508847 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1957367327856649830, guid: 02a036907429ece44a3f67715b964c14, type: 3}
-  m_PrefabInstance: {fileID: 1615990131093764660}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &1155191234 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 126145861324577181, guid: 02a036907429ece44a3f67715b964c14, type: 3}
-  m_PrefabInstance: {fileID: 1615990131093764660}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1439282536
 GameObject:
   m_ObjectHideFlags: 0
@@ -641,17 +614,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1777465863 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6866353346800305490, guid: 02a036907429ece44a3f67715b964c14, type: 3}
-  m_PrefabInstance: {fileID: 1615990131093764660}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &2000144084 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4974919663645562730, guid: 02a036907429ece44a3f67715b964c14, type: 3}
@@ -661,17 +623,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4ddc154bcaf1c045b09d7c3cf1693cc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &2071825492 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5328459613143601691, guid: 02a036907429ece44a3f67715b964c14, type: 3}
-  m_PrefabInstance: {fileID: 1615990131093764660}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1001 &1615990131093764660
@@ -843,34 +794,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 451380817931968663, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
-      propertyPath: networkPrefabs.Array.data[1].prefab
-      value: 
-      objectReference: {fileID: 7731149247704172327, guid: af0b24ff8aad93bcdae61b27e65758c0, type: 3}
     - target: {fileID: 7839577671181779169, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
       propertyPath: m_Name
       value: NetworkManager
       objectReference: {fileID: 0}
-    - target: {fileID: 8882554414220863398, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
-      propertyPath: connectUI
-      value: 
-      objectReference: {fileID: 127017640}
-    - target: {fileID: 8882554414220863398, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
-      propertyPath: quitButton
-      value: 
-      objectReference: {fileID: 1155191234}
-    - target: {fileID: 8882554414220863398, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
-      propertyPath: statusText
-      value: 
-      objectReference: {fileID: 1777465863}
-    - target: {fileID: 8882554414220863398, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
-      propertyPath: hostInputField
-      value: 
-      objectReference: {fileID: 2071825492}
-    - target: {fileID: 8882554414220863398, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
-      propertyPath: portInputField
-      value: 
-      objectReference: {fileID: 914508847}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
