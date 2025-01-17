@@ -19,21 +19,24 @@ public class Bullet : MonoBehaviour
         rb.MovePosition(newPosition);
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnCollisionEnter(Collision collision)
     {
-        //TODO: Maybe use layers?
-        if (other.gameObject.CompareTag("Wall"))
-        {
-            Debug.Log("hit wall");
-            //var speed = lastVelocity.magnitude;
-            //var direction = Vector3.Reflect(lastVelocity.normalized, other.contacts[0].normal);
-            //rb.linearVelocity = direction * Mathf.Max(speed, 0f);
-        }
-
-        if (other.gameObject.CompareTag("Player"))
+        if (collision.gameObject.CompareTag("Player"))
         {
             //Destroy(other.gameObject);
             //Destroy(gameObject);
         }
+        //TODO: Maybe use layers?
+        if (collision.gameObject.CompareTag("Wall"))
+        {
+            Debug.Log("hit wall");
+        }
+
+        transform.forward = Vector3.Reflect(transform.forward, collision.contacts[0].normal);
+        Vector3 newPosition = transform.position + (transform.forward * speed * Time.deltaTime);
+        rb.MovePosition(newPosition);
+
+        // Also move a bit forward
+        Debug.Log(collision.gameObject);
     }
 }

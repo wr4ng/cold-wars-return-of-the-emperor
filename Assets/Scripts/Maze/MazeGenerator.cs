@@ -223,7 +223,7 @@ public class MazeGenerator : MonoBehaviour
     public Vector3 GetRandomSpawnPoint()
     {
         (int x, int y) = spawnPoints[rng.Next(0, spawnPoints.Length)];
-        return new(x, 1, y);
+        return new(x, 0, y);
     }
 
     private void Update()
