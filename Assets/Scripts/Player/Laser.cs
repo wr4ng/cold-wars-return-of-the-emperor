@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Laser : MonoBehaviour
 {
@@ -11,6 +12,11 @@ public class Laser : MonoBehaviour
     void Start()
     {
         lineRenderer.positionCount = numOfReflections + 1;
+    }
+
+    public void EnableLineRenderer()
+    {
+        lineRenderer.enabled = true;
     }
 
     // Update is called once per frame
@@ -34,6 +40,7 @@ public class Laser : MonoBehaviour
             {
                 if (laserHit.collider.CompareTag("Wall"))
                 {
+                    shootLaser(laserHit);
                     currentLaserIndex++;
                     lineRenderer.positionCount = currentLaserIndex + 1;
                     lineRenderer.SetPosition(currentLaserIndex, laserHit.point);
@@ -42,14 +49,15 @@ public class Laser : MonoBehaviour
                 }
                 else if (laserHit.collider.CompareTag("Player"))
                 {
-                    if (Input.GetKeyDown(KeyCode.F))
-                    {
-                        Destroy(laserHit.collider.gameObject);
-                    }
+                    shootLaser(laserHit);
                     currentLaserIndex++;
                     lineRenderer.positionCount = currentLaserIndex + 1;
                     lineRenderer.SetPosition(currentLaserIndex, laserPos + laserDir * range);
                     break;
+                }
+                else
+                {
+                    shootLaser(laserHit);
                 }
             }
             else
@@ -59,6 +67,23 @@ public class Laser : MonoBehaviour
                 lineRenderer.SetPosition(currentLaserIndex, laserPos + laserDir * range);
                 break;
             }
+        }
+    }
+
+    public void shootLaser(RaycastHit laserHit)
+    {
+        PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
+        if (Input.GetKeyDown(KeyCode.F) && laserHit.collider.CompareTag("Player"))
+        {
+            Destroy(laserHit.collider.gameObject);
+            powerUp.hasLaser = false;
+            Debug.Log("Destroyed player");
+        }
+        else if (Input.GetKeyDown(KeyCode.F))
+        {
+            powerUp.hasLaser = false;
+            Debug.Log("Lost Laser");
+
         }
     }
 

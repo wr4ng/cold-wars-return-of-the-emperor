@@ -24,19 +24,16 @@ public class PlayerShooting : MonoBehaviour
     {
 
         PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
-
         if (timer > 0)
         {
             timer -= Time.deltaTime / fireRate;
         }
 
-        if (Input.GetKeyDown(KeyCode.L))
+        if (powerUp.hasLaser || Input.GetKeyDown(KeyCode.L))
         {
-            Debug.Log("Test123");
             Laser();
         }
-
-        if (shootAction.action.triggered && timer <= 0)
+        else if (shootAction.action.triggered && timer <= 0)
         {
 
             Shoot();
@@ -70,8 +67,11 @@ public class PlayerShooting : MonoBehaviour
 
     void Laser()
     {
+        PlayerPowerStats powerUp = GetComponent<PlayerPowerStats>();
+        powerUp.hasLaser = true;
         laserscript.enabled = true;
-        Debug.Log("Testher");
+        laserscript.EnableLineRenderer();
+
     }
 
     void Mini()
