@@ -7,47 +7,70 @@ public class Bullet : MonoBehaviour
 
     [SerializeField]
     private Rigidbody rb;
+    [SerializeField]
+    private NetworkTransform nt;
 
     void Awake()
     {
         Destroy(gameObject, lifetime);
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        Vector3 newPosition = transform.position + (transform.forward * speed * Time.deltaTime);
-        rb.MovePosition(newPosition);
+        float moveDistance = speed * Time.fixedDeltaTime;
+        // Cast ray forward to check if we hit something on the way. If we do, move forward and reflect at point
+        bool hit = Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo, moveDistance);
+        if (hit && !hitInfo.collider.gameObject.CompareTag("Player"))
+        {
+            // Calculate how far the bullet wanted to move through the object, and apply move after reflection
+            float extraMoveDistance = moveDistance - hitInfo.distance;
+            Vector3 reflectedForward = Vector3.Reflect(transform.forward, hitInfo.normal);
+            Vector3 newPositionn = hitInfo.point + reflectedForward * extraMoveDistance;
+
+            rb.MovePosition(newPositionn);
+            transform.forward = reflectedForward;
+
+        }
+        // Otherwise move forward
+        else
+        {
+            Vector3 newPosition = transform.position + (transform.forward * speed * Time.deltaTime);
+            rb.MovePosition(newPosition);
+        }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            Destroy(gameObject);
             if (NetworkManager.Instance.IsServer)
             {
+                Destroy(gameObject);
                 Destroy(collision.gameObject);
                 NetworkTransform networkTransform = collision.gameObject.GetComponent<NetworkTransform>();
                 if (networkTransform == null) { return; }
                 NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
+                NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
             }
         }
-
-        transform.forward = Vector3.Reflect(transform.forward, collision.contacts[0].normal);
-        // Also move a bit forward to avoid re-colliding
-        Vector3 newPosition = transform.position + (speed * Time.deltaTime * transform.forward);
-        rb.MovePosition(newPosition);
     }
 
     // RemotePlayer has a trigger collider, so destroy bullet on hit
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider collider)
     {
-        Destroy(gameObject);
         if (NetworkManager.Instance.IsServer)
         {
-            Destroy(other.gameObject);
-            NetworkTransform networkTransform = other.gameObject.GetComponent<NetworkTransform>();
+            Destroy(gameObject);
+            Destroy(collider.gameObject);
+            NetworkTransform networkTransform = collider.gameObject.GetComponent<NetworkTransform>();
             NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
+            NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
         }
+    }
+
+    private void OnGUI()
+    {
+        // Show ray to indicate where the bullet will move to next frame
+        Debug.DrawLine(transform.position, transform.position + transform.forward * speed * Time.deltaTime, Color.red);
     }
 }

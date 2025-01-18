@@ -81,6 +81,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Type: 1
   IsOwner: 0
+  SyncPosition: 1
   updateRate: 30
 --- !u!54 &2557808518532438234
 Rigidbody:
@@ -124,7 +125,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2

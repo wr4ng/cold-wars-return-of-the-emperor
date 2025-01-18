@@ -1,5 +1,4 @@
 using System;
-using TreeEditor;
 using UnityEngine;
 
 public class NetworkTransform : MonoBehaviour
@@ -7,16 +6,21 @@ public class NetworkTransform : MonoBehaviour
     public Guid ID;
     public EntityType Type;
     public bool IsOwner;
+    public bool SyncPosition;
 
     [SerializeField]
     private int updateRate = 30;
     private float timer = 0;
 
     private Vector3 lastPosition;
+    private Quaternion lastRotation;
 
     private void Update()
     {
+        if (!SyncPosition) { return; }
+
         lastPosition = transform.position;
+        lastRotation = transform.rotation;
         // Only update position if current client is owner of NetworkTransform and we're connected
         if (!NetworkManager.Instance.IsRunning || !IsOwner)
         {
@@ -37,11 +41,11 @@ public class NetworkTransform : MonoBehaviour
         {
             return;
         }
-        transform.position = position;
-        transform.rotation = rotation;
+        transform.SetPositionAndRotation(position, rotation);
     }
 
     public Vector3 GetPosition() => lastPosition;
+    public Quaternion GetRotation() => lastRotation;
 
     //TODO: Handle destroying NetworkTransforms
     //public void Destroy()

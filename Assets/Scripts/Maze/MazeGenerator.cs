@@ -153,7 +153,7 @@ public class MazeGenerator : MonoBehaviour
         {
             for (int y = 0; y < height + 1; y++)
             {
-                Instantiate(pillar, new(-hW + wallLength * x, 0, -hH + wallLength * y), Quaternion.identity);
+                Instantiate(pillar, new(-hW + wallLength * x, 0, -hH + wallLength * y), Quaternion.identity, transform);
             }
         }
     }

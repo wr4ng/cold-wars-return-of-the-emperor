@@ -14,9 +14,6 @@ public class NetworkManager : MonoBehaviour
 {
     public static NetworkManager Instance;
 
-    private string host;
-    private int port;
-
     private SpaceRepository repository;
     private string connectionString;
     private ISpace serverSpace;
@@ -32,9 +29,6 @@ public class NetworkManager : MonoBehaviour
     private Thread clientThread;
 
     private int initialSeed;
-
-    [SerializeField]
-    private GameObject bulletPrefab;
 
     // NetworkTransform management
     [Header("Network Prefabs")]
@@ -71,9 +65,6 @@ public class NetworkManager : MonoBehaviour
 
     public void StartServer(string host, int port)
     {
-        this.host = host;
-        this.port = port;
-
         //TODO Create type with method to create connectionString and gateString
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
 
@@ -250,9 +241,6 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.MazeInfo:
                         HandleMazeInfo(message);
                         break;
-                    case MessageType.SpawnBullet:
-                        HandleSpawnBulletClient(message);
-                        break;
                     default:
                         Debug.LogError("unknown MessageType: " + message.Type);
                         break;
@@ -286,8 +274,9 @@ public class NetworkManager : MonoBehaviour
             Message m2 = new(MessageType.InstatiateNetworkTransform);
             m2.WriteGuid(entityID);
             EntityType type = (entityType == EntityType.LocalPlayer) ? EntityType.RemotePlayer : entityType;
-            m2.WriteString(type.ToString());
+            m2.WriteEnum(type);
             m2.WriteVector3(networkTransform.GetPosition());
+            m2.WriteQuarternion(networkTransform.GetRotation());
             clientSpace.Put(m2.ToTuple());
         }
 
@@ -296,19 +285,20 @@ public class NetworkManager : MonoBehaviour
         Guid newID = Guid.NewGuid();
 
         // Create messages
+        Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
+
         Message newClientMessage = new(MessageType.InstatiateNetworkTransform);
         Message otherClientsMessage = new(MessageType.InstatiateNetworkTransform);
 
         newClientMessage.WriteGuid(newID);
-        otherClientsMessage.WriteGuid(newID);
-
         newClientMessage.WriteString(EntityType.LocalPlayer.ToString());
-        otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
-
-        Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
-
         newClientMessage.WriteVector3(newPosition);
+        newClientMessage.WriteQuarternion(Quaternion.identity);
+
+        otherClientsMessage.WriteGuid(newID);
+        otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
         otherClientsMessage.WriteVector3(newPosition);
+        otherClientsMessage.WriteQuarternion(Quaternion.identity);
 
         clientSpace.Put(newClientMessage.ToTuple());
 
@@ -333,12 +323,13 @@ public class NetworkManager : MonoBehaviour
         Guid entityID = message.ReadGuid();
         EntityType type = message.ReadEnum<EntityType>();
         Vector3 position = message.ReadVector3();
+        Quaternion rotation = message.ReadQuarternion();
 
         // Instatiate object next frame
         pendingActions.Enqueue(() =>
         {
-            // At to Dictionary of my (client) NetworkTransforms
-            GameObject go = Instantiate(networkPrefabMap[type], position, Quaternion.identity);
+            // Add to Dictionary of my (client) NetworkTransforms
+            GameObject go = Instantiate(networkPrefabMap[type], position, rotation);
             NetworkTransform networkTransform = go.GetComponent<NetworkTransform>();
             networkTransform.ID = entityID;
             networkTransforms.Add(entityID, (type, networkTransform));
@@ -370,20 +361,20 @@ public class NetworkManager : MonoBehaviour
     {
         Guid id = message.ReadGuid();
 
-        bool found = networkTransforms.TryGetValue(id, out var value);
-        if (found)
+        pendingActions.Enqueue(() =>
         {
-            (_, NetworkTransform networkTransform) = value;
-            networkTransforms.Remove(id);
-            pendingActions.Enqueue(() =>
+            bool found = networkTransforms.TryGetValue(id, out var value);
+            if (found)
             {
+                (_, NetworkTransform networkTransform) = value;
+                networkTransforms.Remove(id);
                 Destroy(networkTransform.gameObject);
-            });
-        }
-        else
-        {
-            Debug.LogError($"Trying to destroy NetworkTransform with invalid id: {id}");
-        }
+            }
+            else
+            {
+                Debug.Log($"Trying to destroy NetworkTransform with invalid id: {id}");
+            }
+        });
     }
 
     //TODO: Could instead chunk together movement updates so they don't have to be specific packets
@@ -416,28 +407,17 @@ public class NetworkManager : MonoBehaviour
     private void HandleSpawnBulletServer(Message message)
     {
         Guid shooterID = message.ReadGuid();
+        Guid bulletID = message.ReadGuid();
         Vector3 bulletPositon = message.ReadVector3();
         Quaternion bulletQuarternion = message.ReadQuarternion();
 
-        Message spawnBullet = new Message(MessageType.SpawnBullet);
+        Message spawnBullet = new(MessageType.InstatiateNetworkTransform);
+        spawnBullet.WriteGuid(bulletID);
+        spawnBullet.WriteEnum(EntityType.Bullet);
         spawnBullet.WriteVector3(bulletPositon);
         spawnBullet.WriteQuarternion(bulletQuarternion);
 
-        foreach ((_, ISpace s) in clientSpaces.Where(kvp => kvp.Key != shooterID))
-        {
-            s.Put(spawnBullet.ToTuple());
-        }
-    }
-
-    private void HandleSpawnBulletClient(Message message)
-    {
-        Vector3 bulletPositon = message.ReadVector3();
-        Quaternion bulletQuarternion = message.ReadQuarternion();
-
-        pendingActions.Enqueue(() =>
-        {
-            Instantiate(bulletPrefab, bulletPositon, bulletQuarternion);
-        });
+        BroadcastMessage(spawnBullet, excludeID: shooterID);
     }
 
     public void SendMovementUpdate(Guid id, Vector3 position, Quaternion rotation)
@@ -452,8 +432,17 @@ public class NetworkManager : MonoBehaviour
 
     public void SendSpawnBullet(Vector3 bulletPosition, Quaternion bulletRotation)
     {
-        Message message = new Message(MessageType.SpawnBullet);
+        Guid bulletID = Guid.NewGuid();
+
+        // Spawn local bullet
+        GameObject bullet = Instantiate(networkPrefabMap[EntityType.Bullet], bulletPosition, bulletRotation);
+        NetworkTransform networkTransform = bullet.GetComponent<NetworkTransform>();
+        networkTransform.ID = bulletID;
+        networkTransforms.Add(bulletID, (EntityType.Bullet, networkTransform));
+
+        Message message = new(MessageType.SpawnBullet);
         message.WriteGuid(myId);
+        message.WriteGuid(bulletID);
         message.WriteVector3(bulletPosition);
         message.WriteQuarternion(bulletRotation);
 

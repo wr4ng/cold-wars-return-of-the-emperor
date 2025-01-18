@@ -12,4 +12,5 @@ public enum EntityType
 {
     LocalPlayer,
     RemotePlayer,
+    Bullet,
 }
