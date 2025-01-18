@@ -1,5 +1,7 @@
 # Cold Wars: Return of the Emperor
 
+![Cold Wars: Return of the Emperor (logo)](cold-wars-logo.png)
+
 A Unity multiplayer game for the DTU Course:  
 **02148 Introduction to Coordination in Distributed Applications**
 
