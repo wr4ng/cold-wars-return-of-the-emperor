@@ -398,7 +398,6 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
-    //TODO: Could instead chunk together movement updates so they don't have to be specific packets
     private void HandleUpdateNetworkTransform(Message message)
     {
         Guid id = message.ReadGuid();
