@@ -6,9 +6,9 @@ public class Bullet : MonoBehaviour
     public float speed = 10f;
 
     [SerializeField]
-    private Rigidbody rb;
+    private Rigidbody myRigidbody;
     [SerializeField]
-    private NetworkTransform nt;
+    private NetworkTransform myNetworkTransform;
 
     void Awake()
     {
@@ -27,7 +27,7 @@ public class Bullet : MonoBehaviour
             Vector3 reflectedForward = Vector3.Reflect(transform.forward, hitInfo.normal);
             Vector3 newPositionn = hitInfo.point + reflectedForward * extraMoveDistance;
 
-            rb.MovePosition(newPositionn);
+            myRigidbody.MovePosition(newPositionn);
             transform.forward = reflectedForward;
 
         }
@@ -35,7 +35,7 @@ public class Bullet : MonoBehaviour
         else
         {
             Vector3 newPosition = transform.position + (transform.forward * speed * Time.deltaTime);
-            rb.MovePosition(newPosition);
+            myRigidbody.MovePosition(newPosition);
         }
     }
 
@@ -46,11 +46,10 @@ public class Bullet : MonoBehaviour
             if (NetworkManager.Instance.IsServer)
             {
                 Destroy(gameObject);
-                Destroy(collision.gameObject);
                 NetworkTransform networkTransform = collision.gameObject.GetComponent<NetworkTransform>();
                 if (networkTransform == null) { return; }
-                NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
-                NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
+                NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
+                NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
             }
         }
     }
@@ -61,10 +60,9 @@ public class Bullet : MonoBehaviour
         if (NetworkManager.Instance.IsServer)
         {
             Destroy(gameObject);
-            Destroy(collider.gameObject);
             NetworkTransform networkTransform = collider.gameObject.GetComponent<NetworkTransform>();
-            NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
-            NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
+            NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
+            NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
         }
     }
 

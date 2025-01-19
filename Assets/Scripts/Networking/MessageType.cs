@@ -14,6 +14,7 @@ public enum MessageType
     DestroyNetworkTransform,
     SetNetworkTransform,
     SpawnBullet,
+    PlayerHit,
 }
 
 //TODO: Remove and use EnumHelper.MustParse()

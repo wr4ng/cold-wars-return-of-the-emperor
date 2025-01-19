@@ -29,13 +29,14 @@ public class NetworkManager : MonoBehaviour
     private Thread clientThread;
 
     private int initialSeed;
+    private int alivePlayers;
 
     // NetworkTransform management
     [Header("Network Prefabs")]
     [SerializeField]
     private List<NetworkPrefab> networkPrefabs;
     private Dictionary<EntityType, GameObject> networkPrefabMap = new();
-    private Dictionary<Guid, (EntityType, NetworkTransform)> networkTransforms = new();
+    private Dictionary<Guid, (EntityType type, NetworkTransform networkTransform)> networkTransforms = new();
 
     private ConcurrentQueue<Action> pendingActions = new();
 
@@ -117,6 +118,7 @@ public class NetworkManager : MonoBehaviour
         initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         MazeGenerator.Instance.SetSeed(initialSeed);
         MazeGenerator.Instance.GenerateMaze();
+        alivePlayers = 1;
 
         // Create local player for host
         GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], MazeGenerator.Instance.GetRandomSpawnPoint(), Quaternion.identity);
@@ -273,6 +275,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.MazeInfo:
                         HandleMazeInfo(message);
                         break;
+                    case MessageType.PlayerHit:
+                        HandlePlayerHit(message);
+                        break;
                     default:
                         Debug.LogError("[client] unknown MessageType: " + message.Type);
                         break;
@@ -350,6 +355,7 @@ public class NetworkManager : MonoBehaviour
         Message mazeInfo = new Message(MessageType.MazeInfo);
         mazeInfo.WriteInt(initialSeed);
         clientSpace.Put(mazeInfo.ToTuple());
+        alivePlayers += 1;
     }
 
     private void HandleDisconnectServer(Message message)
@@ -359,6 +365,8 @@ public class NetworkManager : MonoBehaviour
         // Read out and remove client
         Client c = clients[id];
         clients.Remove(id);
+
+        //TODO: Handle if player is alive while disconnecting
 
         // Destroy clients player object on remaining clients
         Message destroyMessage = new(MessageType.DestroyNetworkTransform);
@@ -484,6 +492,22 @@ public class NetworkManager : MonoBehaviour
         MazeGenerator.Instance.ClearMaze();
         Close();
     }
+
+    private void HandlePlayerHit(Message message)
+    {
+        Guid transformID = message.ReadGuid();
+        // Disable the corresponding GameObject
+        pendingActions.Enqueue(() => {
+            if (networkTransforms.TryGetValue(transformID, out var value))
+            {
+                value.networkTransform.gameObject.SetActive(false);
+            }
+            else
+            {
+                Debug.Log("[client] can't handle PlayerHit as transformID is not present in networkTransforms");
+            }
+        });
+    }
     #endregion
 
     #region Message senders
@@ -522,6 +546,20 @@ public class NetworkManager : MonoBehaviour
         Message m = new(MessageType.DestroyNetworkTransform);
         m.WriteGuid(networkTransformID);
         BroadcastMessage(m, excludeID: myId);
+    }
+
+    public void SendPlayerHit(Guid transformID)
+    {
+        alivePlayers -= 1;
+        //TODO: if (aliverPlayers <= 1) { resetGame() }
+
+        // Disable player locally on Server
+        networkTransforms[transformID].networkTransform.gameObject.SetActive(false);
+
+        // Send message to clients to disable the hit player
+        Message message = new(MessageType.PlayerHit);
+        message.WriteGuid(transformID);
+        BroadcastMessage(message);
     }
     #endregion
 }
