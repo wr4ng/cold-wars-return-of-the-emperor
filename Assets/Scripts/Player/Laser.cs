@@ -1,19 +1,16 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class Laser : MonoBehaviour
 {
-
     [SerializeField] private LineRenderer lineRenderer;
-    private int numOfReflections = 5;
-    public float range = 20f;
+    [SerializeField] private int maxReflections = 5;
+    [SerializeField] private float range = 20f;
 
     private PlayerPowerStats powerUp;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        lineRenderer.positionCount = numOfReflections + 1;
+        lineRenderer.positionCount = maxReflections + 1;
         powerUp = GetComponent<PlayerPowerStats>();
     }
 
@@ -24,65 +21,69 @@ public class Laser : MonoBehaviour
 
     public void DisableLineRenderer()
     {
-        if (lineRenderer != null) { lineRenderer.enabled = false; lineRenderer.positionCount = 0; Debug.Log("Line renderer disabled."); }
-
+        if (lineRenderer != null)
+        {
+            lineRenderer.enabled = false;
+            lineRenderer.positionCount = 0;
+            Debug.Log("Line renderer disabled.");
+        }
     }
 
-    // Update is called once per frame
     void Update()
     {
-        //if (!enabled || !lineRenderer.enabled)
-        //{
-        //    return;
-        //}
         CastRay(transform.position, transform.forward);
+
         if (Input.GetKeyDown(KeyCode.F))
         {
             DisableLaser();
         }
     }
 
-    private void CastRay(Vector3 laserPos, Vector3 laserDir)
+    private void CastRay(Vector3 startPosition, Vector3 direction)
     {
-        var currentLaserIndex = 0;
+        int currentPointIndex = 0;
         lineRenderer.positionCount = 1;
-        lineRenderer.SetPosition(currentLaserIndex, laserPos);
+        lineRenderer.SetPosition(currentPointIndex, startPosition);
 
-        for (var i = 0; i < numOfReflections; i++)
+        for (int i = 0; i < maxReflections; i++)
         {
+            Ray ray = new Ray(startPosition, direction);
 
-            Ray ray = new Ray(laserPos, laserDir);
-
-            if (Physics.Raycast(ray, out RaycastHit laserHit, range, ~0, QueryTriggerInteraction.Collide))
+            if (Physics.Raycast(ray, out RaycastHit hit, range, ~0, QueryTriggerInteraction.Collide))
             {
-                if (laserHit.collider.CompareTag("Wall"))
+                currentPointIndex++;
+                lineRenderer.positionCount = currentPointIndex + 1;
+                lineRenderer.SetPosition(currentPointIndex, hit.point);
+
+                if (hit.collider.CompareTag("Wall"))
                 {
-                    currentLaserIndex++;
-                    lineRenderer.positionCount = currentLaserIndex + 1;
-                    lineRenderer.SetPosition(currentLaserIndex, laserHit.point);
-                    laserDir = Vector3.Reflect(laserDir, laserHit.normal);
-                    laserPos = laserHit.point;
+                    direction = Vector3.Reflect(direction, hit.normal);
+                    startPosition = hit.point;
                 }
-                else if (laserHit.collider.CompareTag("Player"))
+                else if (hit.collider.CompareTag("Player"))
                 {
                     if (Input.GetKeyDown(KeyCode.F))
                     {
-                        Destroy(laserHit.collider.gameObject);
+                        Destroy(hit.collider.gameObject);
                     }
-                    currentLaserIndex++;
-                    lineRenderer.positionCount = currentLaserIndex + 1;
-                    lineRenderer.SetPosition(currentLaserIndex, laserPos + laserDir * range);
+
+                    AddFinalLaserPoint(startPosition, direction);
                     break;
                 }
             }
             else
             {
-                currentLaserIndex++;
-                lineRenderer.positionCount = currentLaserIndex + 1;
-                lineRenderer.SetPosition(currentLaserIndex, laserPos + laserDir * range);
+                AddFinalLaserPoint(startPosition, direction);
                 break;
             }
         }
+    }
+
+    private void AddFinalLaserPoint(Vector3 position, Vector3 direction)
+    {
+        int finalPointIndex = lineRenderer.positionCount;
+        lineRenderer.positionCount = finalPointIndex + 1;
+        lineRenderer.SetPosition(finalPointIndex, position + direction * range);
     }
 
     private void DisableLaser()

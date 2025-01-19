@@ -68,7 +68,6 @@ public class PlayerShooting : MonoBehaviour
 
     void Laser()
     {
-        // timer = 1;
         powerUp.hasLaser = true;
         laserscript.enabled = true;
         laserscript.EnableLineRenderer();
