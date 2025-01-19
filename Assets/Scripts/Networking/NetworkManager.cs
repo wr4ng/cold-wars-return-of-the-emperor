@@ -39,6 +39,7 @@ public class NetworkManager : MonoBehaviour
 
     private ConcurrentQueue<Action> pendingActions = new();
 
+    #region Unity ovverrides
     private void Awake()
     {
         if (Instance == null)
@@ -58,14 +59,32 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
+    private void FixedUpdate()
+    {
+        if (IsRunning)
+        {
+            while (!pendingActions.IsEmpty)
+            {
+                bool success = pendingActions.TryDequeue(out Action action);
+                if (!success)
+                {
+                    Debug.LogError("failed to dequeue pending action");
+                    return;
+                }
+                action();
+            }
+        }
+    }
+
     private void OnApplicationQuit()
     {
         Close();
     }
+    #endregion
 
+    #region Network setup/close
     public void StartServer(string host, int port)
     {
-        //TODO Create type with method to create connectionString and gateString
         connectionString = string.Format("tcp://{0}:{1}?KEEP", host, port);
 
         // Setup server repository
@@ -76,7 +95,6 @@ public class NetworkManager : MonoBehaviour
         repository.AddSpace("server", serverSpace);
 
         // Setup local client repository
-        //TODO: Setup local client as remote to share code
         myId = Guid.NewGuid();
         mySpace = new SequentialSpace();
         clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
@@ -167,24 +185,9 @@ public class NetworkManager : MonoBehaviour
             Debug.Log("Client closed");
         }
     }
+    #endregion
 
-    private void FixedUpdate()
-    {
-        if (IsRunning)
-        {
-            while (!pendingActions.IsEmpty)
-            {
-                bool success = pendingActions.TryDequeue(out Action action);
-                if (!success)
-                {
-                    Debug.LogError("failed to dequeue pending action");
-                    return;
-                }
-                action();
-            }
-        }
-    }
-
+    #region Thread listeners
     private void RunServerListen()
     {
         Debug.Log("[server] server listen thread started...");
@@ -209,7 +212,7 @@ public class NetworkManager : MonoBehaviour
                         HandleSpawnBulletServer(message);
                         break;
                     default:
-                        Debug.Log("unknown MessageType: " + message.Type);
+                        Debug.Log("[server] unknown MessageType: " + message.Type);
                         break;
                 }
             }
@@ -242,14 +245,27 @@ public class NetworkManager : MonoBehaviour
                         HandleMazeInfo(message);
                         break;
                     default:
-                        Debug.LogError("unknown MessageType: " + message.Type);
+                        Debug.LogError("[client] unknown MessageType: " + message.Type);
                         break;
                 }
 
             }
         }
     }
+    #endregion
 
+    #region Network helpers
+    private void BroadcastMessage(Message message, Guid? excludeID = null)
+    {
+        IEnumerable<ISpace> receivers = clientSpaces.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value);
+        foreach (ISpace clientSpace in receivers)
+        {
+            clientSpace.Put(message.ToTuple());
+        }
+    }
+    #endregion
+
+    #region Message handlers
     private void HandleJoin()
     {
         // Generate new ID for player
@@ -265,51 +281,41 @@ public class NetworkManager : MonoBehaviour
         m.WriteGuid(id);
         serverSpace.Put(0, MessageType.JoinResponse.ToString(), m.ToBytes());
 
-        Debug.Log("New player joining with id: " + id.ToString());
+        Debug.Log("[server] new player joining with id: " + id.ToString());
 
-        // Send all other NetworkTransforms to new player
+        // Send all other existing NetworkTransforms to new player
         foreach (var (entityID, (entityType, networkTransform)) in networkTransforms)
         {
-            //TODO: Fix this!
-            Message m2 = new(MessageType.InstatiateNetworkTransform);
-            m2.WriteGuid(entityID);
+            Message networkTransformMessage = new(MessageType.InstatiateNetworkTransform);
+            networkTransformMessage.WriteGuid(entityID);
+            // Make sure hosts local player is created a remote player on new client
             EntityType type = (entityType == EntityType.LocalPlayer) ? EntityType.RemotePlayer : entityType;
-            m2.WriteEnum(type);
-            m2.WriteVector3(networkTransform.GetPosition());
-            m2.WriteQuarternion(networkTransform.GetRotation());
-            clientSpace.Put(m2.ToTuple());
+            networkTransformMessage.WriteEnum(type);
+            networkTransformMessage.WriteVector3(networkTransform.GetPosition());
+            networkTransformMessage.WriteQuarternion(networkTransform.GetRotation());
+            clientSpace.Put(networkTransformMessage.ToTuple());
         }
 
         // Create LocalPlayer at client and RemotePlayer at all others
         // Generate ID for this entity
         Guid newID = Guid.NewGuid();
-
-        // Create messages
         Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
 
+        // Send message to new client to create local player
         Message newClientMessage = new(MessageType.InstatiateNetworkTransform);
-        Message otherClientsMessage = new(MessageType.InstatiateNetworkTransform);
-
         newClientMessage.WriteGuid(newID);
         newClientMessage.WriteString(EntityType.LocalPlayer.ToString());
         newClientMessage.WriteVector3(newPosition);
         newClientMessage.WriteQuarternion(Quaternion.identity);
+        clientSpace.Put(newClientMessage.ToTuple());
 
+        // Send message to all other clients to create a remote player
+        Message otherClientsMessage = new(MessageType.InstatiateNetworkTransform);
         otherClientsMessage.WriteGuid(newID);
         otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
         otherClientsMessage.WriteVector3(newPosition);
         otherClientsMessage.WriteQuarternion(Quaternion.identity);
-
-        clientSpace.Put(newClientMessage.ToTuple());
-
-        //TODO: Rename variables to be more clear
-        foreach (var (cid, space) in clientSpaces)
-        {
-            if (id != cid)
-            {
-                space.Put(otherClientsMessage.ToTuple());
-            }
-        }
+        BroadcastMessage(otherClientsMessage, excludeID: id);
 
         // Send MazeInfo
         Message mazeInfo = new Message(MessageType.MazeInfo);
@@ -352,7 +358,7 @@ public class NetworkManager : MonoBehaviour
             }
             else
             {
-                Debug.Log("ID of NetworkTransform not found");
+                Debug.Log("[client] ID of NetworkTransform not found");
             }
         });
     }
@@ -372,7 +378,7 @@ public class NetworkManager : MonoBehaviour
             }
             else
             {
-                Debug.Log($"Trying to destroy NetworkTransform with invalid id: {id}");
+                Debug.Log($"[client] trying to destroy NetworkTransform with invalid id: {id}");
             }
         });
     }
@@ -419,7 +425,9 @@ public class NetworkManager : MonoBehaviour
 
         BroadcastMessage(spawnBullet, excludeID: shooterID);
     }
+    #endregion
 
+    #region Message senders
     public void SendMovementUpdate(Guid id, Vector3 position, Quaternion rotation)
     {
         Message message = new Message(MessageType.UpdateNetworkTransform);
@@ -434,7 +442,7 @@ public class NetworkManager : MonoBehaviour
     {
         Guid bulletID = Guid.NewGuid();
 
-        // Spawn local bullet
+        // Spawn local bullet on client immediately
         GameObject bullet = Instantiate(networkPrefabMap[EntityType.Bullet], bulletPosition, bulletRotation);
         NetworkTransform networkTransform = bullet.GetComponent<NetworkTransform>();
         networkTransform.ID = bulletID;
@@ -456,13 +464,5 @@ public class NetworkManager : MonoBehaviour
         m.WriteGuid(networkTransformID);
         BroadcastMessage(m, excludeID: myId);
     }
-
-    private void BroadcastMessage(Message message, Guid? excludeID = null)
-    {
-        IEnumerable<ISpace> receivers = clientSpaces.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value);
-        foreach (ISpace clientSpace in receivers)
-        {
-            clientSpace.Put(message.ToTuple());
-        }
-    }
+    #endregion
 }
