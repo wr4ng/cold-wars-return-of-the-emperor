@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class SceneManager : MonoBehaviour
 {
@@ -11,5 +10,10 @@ public class SceneManager : MonoBehaviour
     public static void LoadMainScene()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene((int)SceneIndex.MainScene);
+    }
+
+    public static void LoadIntroScene()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene((int)SceneIndex.IntroCrawl);
     }
 }

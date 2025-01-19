@@ -17,7 +17,7 @@ public class NetworkManager : MonoBehaviour
     private SpaceRepository repository;
     private string connectionString;
     private ISpace serverSpace;
-    private Dictionary<Guid, ISpace> clientSpaces;
+    private Dictionary<Guid, Client> clients;
 
     private Guid myId;
     private ISpace mySpace;
@@ -108,8 +108,10 @@ public class NetworkManager : MonoBehaviour
 
         // Setup local client repository
         myId = Guid.NewGuid();
+        Guid myPlayerID = Guid.NewGuid();
         mySpace = new SequentialSpace();
-        clientSpaces = new Dictionary<Guid, ISpace>() { { myId, mySpace } }; // Setup clientSpaces dictionary with initially only the local players space
+        // Setup clients dictionary with initially only the local player
+        clients = new Dictionary<Guid, Client>() { { myId, new(mySpace, myPlayerID) } };
 
         // Setup Maze
         initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
@@ -117,7 +119,6 @@ public class NetworkManager : MonoBehaviour
         MazeGenerator.Instance.GenerateMaze();
 
         // Create local player for host
-        Guid myPlayerID = Guid.NewGuid();
         GameObject myPlayer = Instantiate(networkPrefabMap[EntityType.LocalPlayer], MazeGenerator.Instance.GetRandomSpawnPoint(), Quaternion.identity);
         NetworkTransform myNetworkTransform = myPlayer.GetComponent<NetworkTransform>();
         myNetworkTransform.ID = myPlayerID;
@@ -179,6 +180,9 @@ public class NetworkManager : MonoBehaviour
             if (IsServer)
             {
                 Debug.Log("Closing server...");
+                // Send Disconnect to all clients
+                Message disconnect = new(MessageType.Disconnect);
+                BroadcastMessage(disconnect);
                 // Close all gates
                 repository.Dispose();
                 if (serverThread.IsAlive)
@@ -187,6 +191,13 @@ public class NetworkManager : MonoBehaviour
                     serverThread.Join();
                 }
                 Debug.Log("Server closed");
+            }
+            else
+            {
+                // Tell server that we disconnect
+                Message disconnect = new(MessageType.Disconnect);
+                disconnect.WriteGuid(myId);
+                serverSpace.Put(disconnect.ToTuple());
             }
             Debug.Log("Closing client...");
             if (clientThread.IsAlive)
@@ -217,6 +228,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.JoinRequest:
                         HandleJoin();
                         break;
+                    case MessageType.Disconnect:
+                        HandleDisconnectServer(message);
+                        break;
                     case MessageType.UpdateNetworkTransform:
                         HandleUpdateNetworkTransform(message);
                         break;
@@ -244,6 +258,9 @@ public class NetworkManager : MonoBehaviour
                 //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
                 {
+                    case MessageType.Disconnect:
+                        HandleDisconnectClient();
+                        break;
                     case MessageType.InstatiateNetworkTransform:
                         HandleInstantiateNetworkTransform(message);
                         break;
@@ -269,7 +286,7 @@ public class NetworkManager : MonoBehaviour
     #region Network helpers
     private void BroadcastMessage(Message message, Guid? excludeID = null)
     {
-        IEnumerable<ISpace> receivers = clientSpaces.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value);
+        IEnumerable<ISpace> receivers = clients.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value.space);
         foreach (ISpace clientSpace in receivers)
         {
             clientSpace.Put(message.ToTuple());
@@ -280,20 +297,22 @@ public class NetworkManager : MonoBehaviour
     #region Message handlers
     private void HandleJoin()
     {
-        // Generate new ID for player
-        Guid id = Guid.NewGuid();
+        // Generate new ID for client 
+        Guid clientID = Guid.NewGuid();
+        // Generate ID for clients player object
+        Guid playerID = Guid.NewGuid();
 
         // Create new private space for player
         ISpace clientSpace = new SequentialSpace();
-        clientSpaces[id] = clientSpace;
-        repository.AddSpace(id.ToString(), clientSpace);
+        clients[clientID] = new(clientSpace, playerID);
+        repository.AddSpace(clientID.ToString(), clientSpace);
 
         // Send ID back to player
         Message m = new Message(MessageType.JoinResponse);
-        m.WriteGuid(id);
+        m.WriteGuid(clientID);
         serverSpace.Put(0, MessageType.JoinResponse.ToString(), m.ToBytes());
 
-        Debug.Log("[server] new player joining with id: " + id.ToString());
+        Debug.Log("[server] new player joining with id: " + clientID.ToString());
 
         // Send all other existing NetworkTransforms to new player
         foreach (var (entityID, (entityType, networkTransform)) in networkTransforms)
@@ -309,13 +328,11 @@ public class NetworkManager : MonoBehaviour
         }
 
         // Create LocalPlayer at client and RemotePlayer at all others
-        // Generate ID for this entity
-        Guid newID = Guid.NewGuid();
         Vector3 newPosition = MazeGenerator.Instance.GetRandomSpawnPoint();
 
         // Send message to new client to create local player
         Message newClientMessage = new(MessageType.InstatiateNetworkTransform);
-        newClientMessage.WriteGuid(newID);
+        newClientMessage.WriteGuid(playerID);
         newClientMessage.WriteString(EntityType.LocalPlayer.ToString());
         newClientMessage.WriteVector3(newPosition);
         newClientMessage.WriteQuarternion(Quaternion.identity);
@@ -323,16 +340,30 @@ public class NetworkManager : MonoBehaviour
 
         // Send message to all other clients to create a remote player
         Message otherClientsMessage = new(MessageType.InstatiateNetworkTransform);
-        otherClientsMessage.WriteGuid(newID);
+        otherClientsMessage.WriteGuid(playerID);
         otherClientsMessage.WriteString(EntityType.RemotePlayer.ToString());
         otherClientsMessage.WriteVector3(newPosition);
         otherClientsMessage.WriteQuarternion(Quaternion.identity);
-        BroadcastMessage(otherClientsMessage, excludeID: id);
+        BroadcastMessage(otherClientsMessage, excludeID: clientID);
 
         // Send MazeInfo
         Message mazeInfo = new Message(MessageType.MazeInfo);
         mazeInfo.WriteInt(initialSeed);
         clientSpace.Put(mazeInfo.ToTuple());
+    }
+
+    private void HandleDisconnectServer(Message message)
+    {
+        Guid id = message.ReadGuid();
+
+        // Read out and remove client
+        Client c = clients[id];
+        clients.Remove(id);
+
+        // Destroy clients player object on remaining clients
+        Message destroyMessage = new(MessageType.DestroyNetworkTransform);
+        destroyMessage.WriteGuid(c.transformID);
+        BroadcastMessage(destroyMessage);
     }
 
     private void HandleInstantiateNetworkTransform(Message message)
@@ -444,6 +475,12 @@ public class NetworkManager : MonoBehaviour
         spawnBullet.WriteQuarternion(bulletQuarternion);
 
         BroadcastMessage(spawnBullet, excludeID: shooterID);
+    }
+
+    private void HandleDisconnectClient()
+    {
+        MazeGenerator.Instance.ClearMaze();
+        Close();
     }
     #endregion
 

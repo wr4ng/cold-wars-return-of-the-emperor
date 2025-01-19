@@ -30,14 +30,14 @@ public class Message
 
     public static Message FromBytes(byte[] data)
     {
-        Message m = new();
-        m.readBuffer = data;
-        m.readIndex = 0;
-        return m;
+        return new()
+        {
+            readBuffer = data,
+            readIndex = 0
+        };
     }
 
     // Create a Message from a tuple. To be used when receiving a tuple from a tuple space to read out values from buffer
-    //TODO: Maybe Message.FromTuple() instead?
     public static Message FromTuple(ITuple tuple)
     {
         Message m = new();
@@ -48,7 +48,7 @@ public class Message
     }
 
     // Turn Message into a Tuple of the form (MESSAGE_TYPE, DATA) where DATA is a byte[] with values written to Message
-    public Tuple ToTuple() => new Tuple(Type.ToString(), writeBuffer.ToArray());
+    public Tuple ToTuple() => new(Type.ToString(), writeBuffer.ToArray());
 
     public void WriteInt(int value)
     {
@@ -147,7 +147,7 @@ public class Message
         }
         byte[] guidBytes = new byte[16];
         Array.Copy(readBuffer, readIndex, guidBytes, 0, 16);
-        Guid value = new Guid(guidBytes);
+        Guid value = new(guidBytes);
         readIndex += 16;
         return value;
     }

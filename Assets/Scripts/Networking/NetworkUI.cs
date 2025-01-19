@@ -4,14 +4,15 @@ using UnityEngine.UI;
 
 public class NetworkUI : MonoBehaviour
 {
+    public TMP_Text statusText;
+
     [Header("Connect UI")]
     public GameObject connectUI;
     public TMP_InputField hostInputField;
     public TMP_InputField portInputField;
 
     [Header("In-Game UI")]
-    public TMP_Text statusText;
-    public Button quitButton;
+    public GameObject inGameUI;
 
     public void StartHost()
     {
@@ -38,9 +39,19 @@ public class NetworkUI : MonoBehaviour
 #endif
     }
 
+    public void Back()
+    {
+        // Close network connection
+        NetworkManager.Instance.Close();
+
+        // Load initial scene
+        SceneManager.LoadIntroScene();
+    }
+
     private void Update()
     {
-        quitButton.gameObject.SetActive(NetworkManager.Instance.IsRunning);
+        connectUI.SetActive(!NetworkManager.Instance.IsRunning);
+        inGameUI.SetActive(NetworkManager.Instance.IsRunning);
         if (!NetworkManager.Instance.IsRunning)
         {
             statusText.text = "Status: Not connected";

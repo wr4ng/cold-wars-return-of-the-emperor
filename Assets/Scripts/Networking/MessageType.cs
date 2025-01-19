@@ -7,6 +7,7 @@ public enum MessageType
 {
     JoinRequest,
     JoinResponse,
+    Disconnect,
     MazeInfo,
     InstatiateNetworkTransform,
     UpdateNetworkTransform,
