@@ -294,7 +294,7 @@ public class NetworkManager : MonoBehaviour
     }
     #endregion
 
-    #region Message handlers
+    #region Server handlers
     private void HandleJoin()
     {
         // Generate new ID for client 
@@ -366,6 +366,46 @@ public class NetworkManager : MonoBehaviour
         BroadcastMessage(destroyMessage);
     }
 
+    private void HandleUpdateNetworkTransform(Message message)
+    {
+        Guid id = message.ReadGuid();
+        Vector3 position = message.ReadVector3();
+        Quaternion rotation = message.ReadQuarternion();
+
+        // Set position of NetworkTransform on server
+        pendingActions.Enqueue(() =>
+        {
+            bool found = networkTransforms.TryGetValue(id, out var value);
+            if (found)
+            {
+                (_, NetworkTransform networkTransform) = value;
+                networkTransform.SetPositionAndRotation(position, rotation);
+            }
+            else
+            {
+                Debug.Log($"[server] trying to set position of NetworkTransform with unknown id: {id}");
+            }
+        });
+    }
+
+    private void HandleSpawnBulletServer(Message message)
+    {
+        Guid shooterID = message.ReadGuid();
+        Guid bulletID = message.ReadGuid();
+        Vector3 bulletPositon = message.ReadVector3();
+        Quaternion bulletQuarternion = message.ReadQuarternion();
+
+        Message spawnBullet = new(MessageType.InstatiateNetworkTransform);
+        spawnBullet.WriteGuid(bulletID);
+        spawnBullet.WriteEnum(EntityType.Bullet);
+        spawnBullet.WriteVector3(bulletPositon);
+        spawnBullet.WriteQuarternion(bulletQuarternion);
+
+        BroadcastMessage(spawnBullet, excludeID: shooterID);
+    }
+    #endregion
+
+    #region Client handlers
     private void HandleInstantiateNetworkTransform(Message message)
     {
         // Create a NetworkTransform at a given position and rotation with given ID.
@@ -429,28 +469,6 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
-    private void HandleUpdateNetworkTransform(Message message)
-    {
-        Guid id = message.ReadGuid();
-        Vector3 position = message.ReadVector3();
-        Quaternion rotation = message.ReadQuarternion();
-
-        // Set position of NetworkTransform on server
-        pendingActions.Enqueue(() =>
-        {
-            bool found = networkTransforms.TryGetValue(id, out var value);
-            if (found)
-            {
-                (_, NetworkTransform networkTransform) = value;
-                networkTransform.SetPositionAndRotation(position, rotation);
-            }
-            else
-            {
-                Debug.Log($"[server] trying to set position of NetworkTransform with unknown id: {id}");
-            }
-        });
-    }
-
     private void HandleMazeInfo(Message message)
     {
         int seed = message.ReadInt();
@@ -459,22 +477,6 @@ public class NetworkManager : MonoBehaviour
             MazeGenerator.Instance.SetSeed(seed);
             MazeGenerator.Instance.GenerateMaze();
         });
-    }
-
-    private void HandleSpawnBulletServer(Message message)
-    {
-        Guid shooterID = message.ReadGuid();
-        Guid bulletID = message.ReadGuid();
-        Vector3 bulletPositon = message.ReadVector3();
-        Quaternion bulletQuarternion = message.ReadQuarternion();
-
-        Message spawnBullet = new(MessageType.InstatiateNetworkTransform);
-        spawnBullet.WriteGuid(bulletID);
-        spawnBullet.WriteEnum(EntityType.Bullet);
-        spawnBullet.WriteVector3(bulletPositon);
-        spawnBullet.WriteQuarternion(bulletQuarternion);
-
-        BroadcastMessage(spawnBullet, excludeID: shooterID);
     }
 
     private void HandleDisconnectClient()
