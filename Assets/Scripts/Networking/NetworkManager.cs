@@ -356,6 +356,9 @@ public class NetworkManager : MonoBehaviour
 
     private void HandleSetNetworkTransform(Message message)
     {
+        // Server sets position immediately upon receiving message
+        if (IsServer) return;
+
         // Set position and rotation of NetworkTransform with given ID
         Guid id = message.ReadGuid();
         Vector3 position = message.ReadVector3();
