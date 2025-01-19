@@ -20,6 +20,7 @@ public class Bullet : MonoBehaviour
         float moveDistance = speed * Time.fixedDeltaTime;
         // Cast ray forward to check if we hit something on the way. If we do, move forward and reflect at point
         bool hit = Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo, moveDistance);
+        //TODO: If this hits the player also remove it! This allows bullet to move through player
         if (hit && !hitInfo.collider.gameObject.CompareTag("Player"))
         {
             // Calculate how far the bullet wanted to move through the object, and apply move after reflection
