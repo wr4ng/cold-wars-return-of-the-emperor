@@ -73,6 +73,18 @@ public class NetworkManager : MonoBehaviour
                 }
                 action();
             }
+            // After all queued actions have been perfomed, send updated NetworkTransform info of objects that has moved
+            foreach (var (id, (_, networkTransform)) in networkTransforms)
+            {
+                if (networkTransform.hasMoved)
+                {
+                    Message message = new Message(MessageType.SetNetworkTransform);
+                    message.WriteGuid(id);
+                    message.WriteVector3(networkTransform.transform.position);
+                    message.WriteQuarternion(networkTransform.transform.rotation);
+                    BroadcastMessage(message);
+                }
+            }
         }
     }
 
@@ -386,18 +398,24 @@ public class NetworkManager : MonoBehaviour
     //TODO: Could instead chunk together movement updates so they don't have to be specific packets
     private void HandleUpdateNetworkTransform(Message message)
     {
-        // Broadcast movement update to clients
-        //TODO: Create BroadcastMessage(Message m)
-        //TODO: Maybe create a method to easily copy values in underlying byte-array
-        Message broadcastMessage = new Message(MessageType.SetNetworkTransform);
-        broadcastMessage.WriteGuid(message.ReadGuid());
-        broadcastMessage.WriteVector3(message.ReadVector3());
-        broadcastMessage.WriteQuarternion(message.ReadQuarternion());
+        Guid id = message.ReadGuid();
+        Vector3 position = message.ReadVector3();
+        Quaternion rotation = message.ReadQuarternion();
 
-        foreach (ISpace clientSpace in clientSpaces.Values)
+        // Set position of NetworkTransform on server
+        pendingActions.Enqueue(() =>
         {
-            clientSpace.Put(broadcastMessage.ToTuple());
-        }
+            bool found = networkTransforms.TryGetValue(id, out var value);
+            if (found)
+            {
+                (_, NetworkTransform networkTransform) = value;
+                networkTransform.SetPositionAndRotation(position, rotation);
+            }
+            else
+            {
+                Debug.Log($"[server] trying to set position of NetworkTransform with unknown id: {id}");
+            }
+        });
     }
 
     private void HandleMazeInfo(Message message)

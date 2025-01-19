@@ -15,6 +15,9 @@ public class NetworkTransform : MonoBehaviour
     private Vector3 lastPosition;
     private Quaternion lastRotation;
 
+    // Used to check if this objects position have been updated this frame, and should be transmitted to other clients (server perspective)
+    public bool hasMoved;
+
     private void Update()
     {
         if (!SyncPosition) { return; }
@@ -28,6 +31,7 @@ public class NetworkTransform : MonoBehaviour
         }
         if (timer >= 1 / updateRate)
         {
+            //TODO: Maybe only send movement if object has move more than some fixed distance since last position
             NetworkManager.Instance.SendMovementUpdate(ID, transform.position, transform.rotation);
             timer = 0;
         }
@@ -36,6 +40,10 @@ public class NetworkTransform : MonoBehaviour
 
     public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
     {
+        if (NetworkManager.Instance.IsServer)
+        {
+            hasMoved = true;
+        }
         //TODO: Handle reconciliation when IsOwner and positions don't match
         if (IsOwner)
         {
