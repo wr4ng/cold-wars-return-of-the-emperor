@@ -28,7 +28,7 @@ public class NetworkManager : MonoBehaviour
     private Thread serverThread;
     private Thread clientThread;
 
-    private int initialSeed;
+    private int mazeSeed;
     private int alivePlayers;
 
     // NetworkTransform management
@@ -115,8 +115,8 @@ public class NetworkManager : MonoBehaviour
         clients = new Dictionary<Guid, Client>() { { myId, new(mySpace, myPlayerID) } };
 
         // Setup Maze
-        initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-        MazeGenerator.Instance.SetSeed(initialSeed);
+        mazeSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        MazeGenerator.Instance.SetSeed(mazeSeed);
         MazeGenerator.Instance.GenerateMaze();
         alivePlayers = 1;
 
@@ -278,6 +278,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.PlayerHit:
                         HandlePlayerHit(message);
                         break;
+                    case MessageType.NewRound:
+                        HandleNewRound(message);
+                        break;
                     default:
                         Debug.LogError("[client] unknown MessageType: " + message.Type);
                         break;
@@ -353,7 +356,7 @@ public class NetworkManager : MonoBehaviour
 
         // Send MazeInfo
         Message mazeInfo = new Message(MessageType.MazeInfo);
-        mazeInfo.WriteInt(initialSeed);
+        mazeInfo.WriteInt(mazeSeed);
         clientSpace.Put(mazeInfo.ToTuple());
         alivePlayers += 1;
     }
@@ -489,15 +492,19 @@ public class NetworkManager : MonoBehaviour
 
     private void HandleDisconnectClient()
     {
-        MazeGenerator.Instance.ClearMaze();
-        Close();
+        pendingActions.Enqueue(() =>
+        {
+            MazeGenerator.Instance.ClearMaze();
+            Close();
+        });
     }
 
     private void HandlePlayerHit(Message message)
     {
         Guid transformID = message.ReadGuid();
         // Disable the corresponding GameObject
-        pendingActions.Enqueue(() => {
+        pendingActions.Enqueue(() =>
+        {
             if (networkTransforms.TryGetValue(transformID, out var value))
             {
                 value.networkTransform.gameObject.SetActive(false);
@@ -508,6 +515,34 @@ public class NetworkManager : MonoBehaviour
             }
         });
     }
+
+    private void HandleNewRound(Message message)
+    {
+        int seed = message.ReadInt();
+        Guid id = message.ReadGuid();
+        Vector3 newPosition = message.ReadVector3();
+
+        pendingActions.Enqueue(() =>
+        {
+            // Setup new maze
+            MazeGenerator.Instance.ClearMaze();
+            MazeGenerator.Instance.SetSeed(seed);
+            MazeGenerator.Instance.GenerateMaze();
+
+            // Re-enable all NetworkTransforms
+            foreach (var (_, (_, networkTransform)) in networkTransforms)
+            {
+                if (networkTransform != null)
+                {
+                    networkTransform.gameObject.SetActive(true);
+                }
+            }
+
+            // Set my new position
+            networkTransforms[id].networkTransform.transform.position = newPosition;
+        });
+    }
+
     #endregion
 
     #region Message senders
@@ -551,7 +586,12 @@ public class NetworkManager : MonoBehaviour
     public void SendPlayerHit(Guid transformID)
     {
         alivePlayers -= 1;
-        //TODO: if (aliverPlayers <= 1) { resetGame() }
+        if (alivePlayers <= 1)
+        {
+            //TODO: Maybe start timer to not reset game instantly
+            NewRound();
+            return;
+        }
 
         // Disable player locally on Server
         networkTransforms[transformID].networkTransform.gameObject.SetActive(false);
@@ -562,4 +602,40 @@ public class NetworkManager : MonoBehaviour
         BroadcastMessage(message);
     }
     #endregion
+
+    private void NewRound()
+    {
+        // Reset maze
+        mazeSeed += 1;
+        MazeGenerator.Instance.ClearMaze();
+        MazeGenerator.Instance.SetSeed(mazeSeed);
+        MazeGenerator.Instance.GenerateMaze();
+
+        // Re-enable all NetworkTransforms
+        //TODO: Destroy bullets so they don't carry over
+        foreach (var (_, (_, networkTransform)) in networkTransforms)
+        {
+            if (networkTransform != null)
+            {
+                networkTransform.gameObject.SetActive(true);
+            }
+        }
+
+        alivePlayers = clients.Count;
+
+        // Send each player NewRound message
+        foreach (var (id, c) in clients)
+        {
+            if (id == myId)
+            {
+                networkTransforms[c.transformID].networkTransform.transform.position = MazeGenerator.Instance.GetRandomSpawnPoint();
+                continue;
+            }
+            Message message = new(MessageType.NewRound);
+            message.WriteInt(mazeSeed);
+            message.WriteGuid(c.transformID);
+            message.WriteVector3(MazeGenerator.Instance.GetRandomSpawnPoint());
+            c.space.Put(message.ToTuple());
+        }
+    }
 }

@@ -45,11 +45,11 @@ public class Bullet : MonoBehaviour
         {
             if (NetworkManager.Instance.IsServer)
             {
-                Destroy(gameObject);
                 NetworkTransform networkTransform = collision.gameObject.GetComponent<NetworkTransform>();
                 if (networkTransform == null) { return; }
                 NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
                 NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
+                Destroy(gameObject);
             }
         }
     }
@@ -59,10 +59,10 @@ public class Bullet : MonoBehaviour
     {
         if (NetworkManager.Instance.IsServer)
         {
-            Destroy(gameObject);
             NetworkTransform networkTransform = collider.gameObject.GetComponent<NetworkTransform>();
             NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
             NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
+            Destroy(gameObject);
         }
     }
 
