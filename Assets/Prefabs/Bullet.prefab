@@ -152,8 +152,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lifetime: 4
   speed: 12
-  rb: {fileID: 7654282215031260761}
-  nt: {fileID: 3644985859460259628}
+  myRigidbody: {fileID: 7654282215031260761}
+  myNetworkTransform: {fileID: 3644985859460259628}
 --- !u!114 &3644985859460259628
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -170,3 +170,4 @@ MonoBehaviour:
   IsOwner: 0
   SyncPosition: 0
   updateRate: 0
+  hasMoved: 0

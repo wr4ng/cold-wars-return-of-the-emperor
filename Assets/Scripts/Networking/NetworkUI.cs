@@ -4,14 +4,27 @@ using UnityEngine.UI;
 
 public class NetworkUI : MonoBehaviour
 {
+    public TMP_Text statusText;
+
     [Header("Connect UI")]
     public GameObject connectUI;
     public TMP_InputField hostInputField;
     public TMP_InputField portInputField;
 
     [Header("In-Game UI")]
-    public TMP_Text statusText;
-    public Button quitButton;
+    public GameObject inGameUI;
+
+    private void Update()
+    {
+        connectUI.SetActive(!NetworkManager.Instance.IsRunning);
+        inGameUI.SetActive(NetworkManager.Instance.IsRunning);
+        if (!NetworkManager.Instance.IsRunning)
+        {
+            statusText.text = "Status: Not connected";
+            return;
+        }
+        statusText.text = "Status: " + (NetworkManager.Instance.IsServer ? "Host" : "Client");
+    }
 
     public void StartHost()
     {
@@ -38,14 +51,18 @@ public class NetworkUI : MonoBehaviour
 #endif
     }
 
-    private void Update()
+    public void Back()
     {
-        quitButton.gameObject.SetActive(NetworkManager.Instance.IsRunning);
-        if (!NetworkManager.Instance.IsRunning)
-        {
-            statusText.text = "Status: Not connected";
-            return;
-        }
-        statusText.text = "Status: " + (NetworkManager.Instance.IsServer ? "Host" : "Client");
+        // Close network connection
+        NetworkManager.Instance.Close();
+
+        // Load initial scene
+        SceneManager.LoadIntroScene();
     }
+
+    public void SelectDefault() => CharacterSelection.Instance.SelectCharacter(Character.Default);
+    public void SelectSidius() => CharacterSelection.Instance.SelectCharacter(Character.Sidius);
+    public void SelectSnowda() => CharacterSelection.Instance.SelectCharacter(Character.Snowda);
+    public void SelectChewbacca() => CharacterSelection.Instance.SelectCharacter(Character.Chewbacca);
+
 }

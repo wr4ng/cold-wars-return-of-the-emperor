@@ -6,9 +6,9 @@ public class Bullet : MonoBehaviour
     public float speed = 10f;
 
     [SerializeField]
-    private Rigidbody rb;
+    private Rigidbody myRigidbody;
     [SerializeField]
-    private NetworkTransform nt;
+    private NetworkTransform myNetworkTransform;
 
     void Awake()
     {
@@ -20,22 +20,30 @@ public class Bullet : MonoBehaviour
         float moveDistance = speed * Time.fixedDeltaTime;
         // Cast ray forward to check if we hit something on the way. If we do, move forward and reflect at point
         bool hit = Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo, moveDistance);
-        if (hit && !hitInfo.collider.gameObject.CompareTag("Player"))
+        if (hit)
         {
+            if (NetworkManager.Instance.IsServer && hitInfo.collider.CompareTag("Player"))
+            {
+
+                NetworkTransform networkTransform = hitInfo.collider.gameObject.GetComponent<NetworkTransform>();
+                NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
+                NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
+                Destroy(gameObject);
+                return;
+            }
             // Calculate how far the bullet wanted to move through the object, and apply move after reflection
             float extraMoveDistance = moveDistance - hitInfo.distance;
             Vector3 reflectedForward = Vector3.Reflect(transform.forward, hitInfo.normal);
             Vector3 newPositionn = hitInfo.point + reflectedForward * extraMoveDistance;
 
-            rb.MovePosition(newPositionn);
+            myRigidbody.MovePosition(newPositionn);
             transform.forward = reflectedForward;
-
         }
         // Otherwise move forward
         else
         {
             Vector3 newPosition = transform.position + (transform.forward * speed * Time.deltaTime);
-            rb.MovePosition(newPosition);
+            myRigidbody.MovePosition(newPosition);
         }
     }
 
@@ -45,12 +53,11 @@ public class Bullet : MonoBehaviour
         {
             if (NetworkManager.Instance.IsServer)
             {
-                Destroy(gameObject);
-                Destroy(collision.gameObject);
                 NetworkTransform networkTransform = collision.gameObject.GetComponent<NetworkTransform>();
                 if (networkTransform == null) { return; }
-                NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
-                NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
+                NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
+                NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
+                Destroy(gameObject);
             }
         }
     }
@@ -60,11 +67,10 @@ public class Bullet : MonoBehaviour
     {
         if (NetworkManager.Instance.IsServer)
         {
-            Destroy(gameObject);
-            Destroy(collider.gameObject);
             NetworkTransform networkTransform = collider.gameObject.GetComponent<NetworkTransform>();
-            NetworkManager.Instance.SendDestroyNetworkTransform(networkTransform.ID);
-            NetworkManager.Instance.SendDestroyNetworkTransform(nt.ID);
+            NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
+            NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
+            Destroy(gameObject);
         }
     }
 
