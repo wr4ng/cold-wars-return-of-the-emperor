@@ -671,9 +671,9 @@ public class NetworkManager : MonoBehaviour
         // Send position of power up
         Message m = new(MessageType.SpawnPowerUp);
         m.WriteVector3(newPosition);
-        foreach (ISpace clientSpace in clientSpaces.Values)
+        foreach (var c in clients)
         {
-            clientSpace.Put(m.ToTuple());
+            c.Value.space.Put(m.ToTuple());
         }
     }
 
