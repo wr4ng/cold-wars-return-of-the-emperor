@@ -843,6 +843,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 451380817931968663, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
+      propertyPath: powerUpPrefab
+      value: 
+      objectReference: {fileID: 188136935589729501, guid: 073675fdc7ecf5649a4932afdde93510, type: 3}
     - target: {fileID: 7839577671181779169, guid: 3765d773c17ace40c847c31ef999412b, type: 3}
       propertyPath: m_Name
       value: NetworkManager

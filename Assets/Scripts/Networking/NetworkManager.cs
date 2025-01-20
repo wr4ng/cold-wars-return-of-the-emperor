@@ -36,6 +36,9 @@ public class NetworkManager : MonoBehaviour
     [SerializeField]
     private GameObject bulletPrefab;
 
+    [SerializeField]
+    private GameObject powerUpPrefab;
+
     // NetworkTransform management
     [Header("Network Prefabs")]
     [SerializeField]
@@ -217,9 +220,9 @@ public class NetworkManager : MonoBehaviour
                     case MessageType.SpawnBullet:
                         HandleSpawnBulletServer(message);
                         break;
-                    case MessageType.SpawnPowerUp:
-                        HandleSpawnPowerUp(message);
-                        break;
+                    /* case MessageType.SpawnPowerUp:
+                        HandleSpawnPowerUpServer(message);
+                        break; */
                     default:
                         Debug.Log("unknown MessageType: " + message.Type);
                         break;
@@ -492,29 +495,36 @@ public class NetworkManager : MonoBehaviour
         // Send position of power up
         Message m = new(MessageType.SpawnPowerUp);
         m.WriteVector3(newPosition);
-
         foreach (ISpace clientSpace in clientSpaces.Values)
         {
             clientSpace.Put(m.ToTuple());
         }
-
     }
+
 
     private void HandleSpawnPowerUp(Message message)
     {
         Vector3 position = message.ReadVector3();
         Debug.Log("Powerup pickup received at" + position);
-        /* pendingActions.Enqueue(() =>
+        pendingActions.Enqueue(() =>
         {
-            Instantiate(networkPrefabMap[EntityType.PowerUp], position, Quaternion.identity);
-        }); */
+            Instantiate(powerUpPrefab, position, Quaternion.identity);
+        });
     }
+
+    private float powerupTimer = 0f;
+    private float powerupInterval = 10f;
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F))
+        if (IsServer)
         {
-            SpawnPowerUp();
+            powerupTimer += Time.deltaTime;
+            if (powerupTimer >= powerupInterval)
+            {
+                powerupTimer = 0f;
+                SpawnPowerUp();
+            }
         }
     }
 }
