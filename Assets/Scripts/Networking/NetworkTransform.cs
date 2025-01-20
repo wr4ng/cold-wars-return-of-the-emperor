@@ -54,10 +54,4 @@ public class NetworkTransform : MonoBehaviour
 
     public Vector3 GetPosition() => lastPosition;
     public Quaternion GetRotation() => lastRotation;
-
-    //TODO: Handle destroying NetworkTransforms
-    //public void Destroy()
-    //{
-    //    NetworkManager.Instance.DestroyNetworkTransform();
-    //}
 }

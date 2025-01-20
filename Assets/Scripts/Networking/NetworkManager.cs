@@ -155,7 +155,6 @@ public class NetworkManager : MonoBehaviour
         ITuple responseTuple = serverSpace.Get(0, MessageType.JoinResponse.ToString(), typeof(byte[]));
         Message joinResponse = Message.FromBytes((byte[])responseTuple[2]);
         myId = joinResponse.ReadGuid();
-        //TODO: Receive info on number of existing players
 
         Debug.Log("Received id: " + myId.ToString());
 
@@ -224,7 +223,6 @@ public class NetworkManager : MonoBehaviour
             {
                 Message message = Message.FromTuple(t);
 
-                //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
                 {
                     case MessageType.JoinRequest:
@@ -257,7 +255,6 @@ public class NetworkManager : MonoBehaviour
             {
                 Message message = Message.FromTuple(tuple);
 
-                //TODO: Use Dictionary<MessageType, function(Message) -> void> to map MessageType to handler.
                 switch (message.Type)
                 {
                     case MessageType.Disconnect:
@@ -612,7 +609,6 @@ public class NetworkManager : MonoBehaviour
         MazeGenerator.Instance.GenerateMaze();
 
         // Re-enable all NetworkTransforms
-        //TODO: Destroy bullets so they don't carry over
         foreach (var (_, (_, networkTransform)) in networkTransforms)
         {
             if (networkTransform != null)

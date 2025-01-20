@@ -1,7 +1,5 @@
 using System;
 
-//TODO: Use ints instead of strings as MessageType
-//TODO: Maybe split up into Server->Client messages and Client->Server messages to avoid confusion
 [Serializable]
 public enum MessageType
 {
