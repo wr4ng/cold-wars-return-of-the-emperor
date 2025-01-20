@@ -18,7 +18,6 @@ public enum MessageType
     NewRound,
 }
 
-//TODO: Remove and use EnumHelper.MustParse()
 public static class MessageTypeHelper
 {
     public static MessageType Parse(string value)
