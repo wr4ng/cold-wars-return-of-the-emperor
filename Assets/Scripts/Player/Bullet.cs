@@ -20,9 +20,17 @@ public class Bullet : MonoBehaviour
         float moveDistance = speed * Time.fixedDeltaTime;
         // Cast ray forward to check if we hit something on the way. If we do, move forward and reflect at point
         bool hit = Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo, moveDistance);
-        //TODO: If this hits the player also remove it! This allows bullet to move through player
-        if (hit && !hitInfo.collider.gameObject.CompareTag("Player"))
+        if (hit)
         {
+            if (NetworkManager.Instance.IsServer && hitInfo.collider.CompareTag("Player"))
+            {
+
+                NetworkTransform networkTransform = hitInfo.collider.gameObject.GetComponent<NetworkTransform>();
+                NetworkManager.Instance.SendPlayerHit(networkTransform.ID);
+                NetworkManager.Instance.SendDestroyNetworkTransform(myNetworkTransform.ID);
+                Destroy(gameObject);
+                return;
+            }
             // Calculate how far the bullet wanted to move through the object, and apply move after reflection
             float extraMoveDistance = moveDistance - hitInfo.distance;
             Vector3 reflectedForward = Vector3.Reflect(transform.forward, hitInfo.normal);
@@ -30,7 +38,6 @@ public class Bullet : MonoBehaviour
 
             myRigidbody.MovePosition(newPositionn);
             transform.forward = reflectedForward;
-
         }
         // Otherwise move forward
         else
