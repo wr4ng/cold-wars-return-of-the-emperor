@@ -14,6 +14,18 @@ public class NetworkUI : MonoBehaviour
     [Header("In-Game UI")]
     public GameObject inGameUI;
 
+    private void Update()
+    {
+        connectUI.SetActive(!NetworkManager.Instance.IsRunning);
+        inGameUI.SetActive(NetworkManager.Instance.IsRunning);
+        if (!NetworkManager.Instance.IsRunning)
+        {
+            statusText.text = "Status: Not connected";
+            return;
+        }
+        statusText.text = "Status: " + (NetworkManager.Instance.IsServer ? "Host" : "Client");
+    }
+
     public void StartHost()
     {
         NetworkManager.Instance.StartServer(hostInputField.text, int.Parse(portInputField.text));
@@ -48,15 +60,9 @@ public class NetworkUI : MonoBehaviour
         SceneManager.LoadIntroScene();
     }
 
-    private void Update()
-    {
-        connectUI.SetActive(!NetworkManager.Instance.IsRunning);
-        inGameUI.SetActive(NetworkManager.Instance.IsRunning);
-        if (!NetworkManager.Instance.IsRunning)
-        {
-            statusText.text = "Status: Not connected";
-            return;
-        }
-        statusText.text = "Status: " + (NetworkManager.Instance.IsServer ? "Host" : "Client");
-    }
+    public void SelectDefault() => CharacterSelection.Instance.SelectCharacter(Character.Default);
+    public void SelectSidius() => CharacterSelection.Instance.SelectCharacter(Character.Sidius);
+    public void SelectSnowda() => CharacterSelection.Instance.SelectCharacter(Character.Snowda);
+    public void SelectChewbacca() => CharacterSelection.Instance.SelectCharacter(Character.Chewbacca);
+
 }
