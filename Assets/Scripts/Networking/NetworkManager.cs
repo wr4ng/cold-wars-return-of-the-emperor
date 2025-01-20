@@ -31,6 +31,10 @@ public class NetworkManager : MonoBehaviour
     private int mazeSeed;
     private int alivePlayers;
 
+    // Parameters
+    [SerializeField]
+    private int maxPlayers = 4;
+
     // NetworkTransform management
     [Header("Network Prefabs")]
     [SerializeField]
@@ -151,9 +155,15 @@ public class NetworkManager : MonoBehaviour
         Debug.Log("Connected to: " + connectionString);
 
         // Wait for JoinResponse
-        //TODO: Fix different for pattern when client need to read from serverspace
-        ITuple responseTuple = serverSpace.Get(0, MessageType.JoinResponse.ToString(), typeof(byte[]));
+        ITuple responseTuple = serverSpace.Get(MessageType.JoinResponse.ToString(), typeof(bool), typeof(byte[]));
+        bool canJoin = (bool)responseTuple[1];
         Message joinResponse = Message.FromBytes((byte[])responseTuple[2]);
+        if (!canJoin)
+        {
+            string reason = joinResponse.ReadString();
+            Debug.Log(reason);
+            return;
+        }
         myId = joinResponse.ReadGuid();
 
         Debug.Log("Received id: " + myId.ToString());
@@ -226,7 +236,7 @@ public class NetworkManager : MonoBehaviour
                 switch (message.Type)
                 {
                     case MessageType.JoinRequest:
-                        HandleJoin();
+                        HandleJoin(message);
                         break;
                     case MessageType.Disconnect:
                         HandleDisconnectServer(message);
@@ -291,8 +301,7 @@ public class NetworkManager : MonoBehaviour
     #region Network helpers
     private void BroadcastMessage(Message message, Guid? excludeID = null)
     {
-        IEnumerable<ISpace> receivers = clients.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value.space);
-        foreach (ISpace clientSpace in receivers)
+        foreach (ISpace clientSpace in clients.Where((pair) => pair.Key != excludeID).Select((pair) => pair.Value.space))
         {
             clientSpace.Put(message.ToTuple());
         }
@@ -300,12 +309,21 @@ public class NetworkManager : MonoBehaviour
     #endregion
 
     #region Server handlers
-    private void HandleJoin()
+    private void HandleJoin(Message message)
     {
-        // Generate new ID for client 
-        Guid clientID = Guid.NewGuid();
-        // Generate ID for clients player object
-        Guid playerID = Guid.NewGuid();
+        // Determine if player is allowed to join
+        if (clients.Count >= maxPlayers)
+        {
+            // Send back a response showing that the game is full
+            Message response = new(MessageType.JoinResponse);
+            response.WriteString("The game is full!");
+            serverSpace.Put(MessageType.JoinResponse.ToString(), false, response.ToBytes());
+            return;
+        }
+
+        // If client is allowed to join...
+        Guid clientID = Guid.NewGuid(); // Generate new ID for client 
+        Guid playerID = Guid.NewGuid(); // Generate ID for clients player object
 
         // Create new private space for player
         ISpace clientSpace = new SequentialSpace();
@@ -315,7 +333,7 @@ public class NetworkManager : MonoBehaviour
         // Send ID back to player
         Message m = new Message(MessageType.JoinResponse);
         m.WriteGuid(clientID);
-        serverSpace.Put(0, MessageType.JoinResponse.ToString(), m.ToBytes());
+        serverSpace.Put(MessageType.JoinResponse.ToString(), true, m.ToBytes());
 
         Debug.Log("[server] new player joining with id: " + clientID.ToString());
 

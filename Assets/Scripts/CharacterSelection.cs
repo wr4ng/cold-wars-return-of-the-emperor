@@ -30,10 +30,30 @@ public class CharacterSelection : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (NetworkManager.Instance.IsRunning)
+            DisableAll();
+        else
+            EnableSelected();
+    }
+
     public void SelectCharacter(Character c)
     {
         SelectedCharacter = c;
-        int index = (int)c;
+    }
+
+    private void DisableAll()
+    {
+        foreach (GameObject g in characters)
+        {
+            g.SetActive(false);
+        }
+    }
+
+    private void EnableSelected()
+    {
+        int index = (int)SelectedCharacter;
         for (int i = 0; i < characters.Length; i++)
         {
             characters[i].SetActive(index == i);
